@@ -75,74 +75,71 @@
 
         try {
             const docRef = await db.collection('users').add(userData);
-            console.log("Document written with ID: ", docRef.id);
-            userData.docId = docRef.id; // Save document ID for later updates
-            alert('User information submitted successfully!');
-            document.getElementById('user-form').style.display = 'none';
-            document.getElementById('posts').style.display = 'block';
-            console.log("Preparing to show posts");
-            showNextPost();
-        } catch (error) {
-            console.error("Error submitting data:", error);
-            alert('Error submitting data. Please try again.');
-        }
-    });
+        console.log("Document written with ID: ", docRef.id);
+        userData.docId = docRef.id;
+        alert('User information submitted successfully!');
+        document.getElementById('user-form').style.display = 'none';
+        document.getElementById('posts').style.display = 'block';
+        console.log("Switched to posts view");
+        showNextPost();
+    } catch (error) {
+        console.error("Error submitting data:", error);
+        alert('Error submitting data. Please try again.');
+    }
+});
 
     function showNextPost() {
-        console.log("showNextPost called, current post:", currentPost);
-        if (currentPost < totalPosts) {
-            const postElement = document.createElement('div');
-            postElement.className = 'post';
-            postElement.innerHTML = `
-                <h3>Post ${currentPost + 1}</h3>
-                <img src="https://via.placeholder.com/400" alt="Post ${currentPost + 1}">
-                <button class="like-btn" onclick="likePost(${currentPost})">Like</button>
-            `;
-            document.getElementById('posts').innerHTML = '';
-            document.getElementById('posts').appendChild(postElement);
-            console.log("Post added to DOM");
-            startTime = Date.now();
-            currentPost++;
-        } else {
-            console.log("All posts have been displayed");
-            finishSurvey();
-        }
+    console.log("showNextPost called, current post:", currentPost);
+    if (currentPost < totalPosts) {
+        const postElement = document.createElement('div');
+        postElement.className = 'post';
+        postElement.innerHTML = `
+            <h3>Post ${currentPost + 1}</h3>
+            <img src="https://via.placeholder.com/400" alt="Post ${currentPost + 1}">
+            <button class="like-btn" onclick="likePost(${currentPost})">Like</button>
+        `;
+        document.getElementById('posts').innerHTML = '';
+        document.getElementById('posts').appendChild(postElement);
+        console.log("Post added to DOM");
+        startTime = Date.now();
+        currentPost++;
+    } else {
+        console.log("All posts have been displayed");
+        finishSurvey();
     }
+}
 
     async function likePost(postId) {
-        const viewTime = (Date.now() - startTime) / 1000;
-        userData.posts.push({
-            id: postId,
-            liked: true,
-            viewTime: viewTime
+    const viewTime = (Date.now() - startTime) / 1000;
+    console.log(`Liking post ${postId}, view time: ${viewTime} seconds`);
+    
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            posts: firebase.firestore.FieldValue.arrayUnion({
+                id: postId,
+                liked: true,
+                viewTime: viewTime
+            })
         });
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                posts: firebase.firestore.FieldValue.arrayUnion({
-                    id: postId,
-                    liked: true,
-                    viewTime: viewTime
-                })
-            });
-            console.log("Post data updated successfully");
-        } catch (error) {
-            console.error("Error updating post data: ", error);
-        }
-        showNextPost();
+        console.log("Post data updated successfully");
+    } catch (error) {
+        console.error("Error updating post data: ", error);
     }
+    showNextPost();
+}
 
     async function finishSurvey() {
-        document.getElementById('posts').innerHTML = '<h2>Thank you for completing the survey!</h2>';
-        console.log("Survey completed. Final user data:", userData);
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                surveyCompleted: true
-            });
-            console.log("Survey marked as completed in Firestore");
-        } catch (error) {
-            console.error("Error marking survey as completed: ", error);
-        }
+    document.getElementById('posts').innerHTML = '<h2>Thank you for completing the survey!</h2>';
+    console.log("Survey completed. Final user data:", userData);
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true
+        });
+        console.log("Survey marked as completed in Firestore");
+    } catch (error) {
+        console.error("Error marking survey as completed: ", error);
     }
+}
     </script>
 </body>
 </html>
