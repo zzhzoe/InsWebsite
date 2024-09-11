@@ -80,18 +80,52 @@
             showNextPost();
         }
 
-        function saveData() {
-            const yaml = jsyaml.dump(userData);
-            const blob = new Blob([yaml], {type: 'text/yaml'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'user_data.yml';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            alert('感谢您的参与！数据已保存。');
+        document.getElementById('survey-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const userData = {
+    name: document.getElementById('name').value,
+    age: parseInt(document.getElementById('age').value),
+    gender: document.getElementById('gender').value,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    const docRef = await db.collection('users').add(userData);
+    console.log("Document written with ID: ", docRef.id);
+    alert('数据已成功提交！');
+    // 这里可以添加代码来清除表单或显示下一个页面
+  } catch (error) {
+    console.error("Error adding document: ", error);
+    alert('提交数据时出错，请重试。');
+  }
+});
         }
-    </script>
+    <script>
+  // 您的 Firebase 配置
+  const firebaseConfig = {apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
+
+  authDomain: "research-project-0801.firebaseapp.com",
+
+  projectId: "research-project-0801",
+
+  storageBucket: "research-project-0801.appspot.com",
+
+  messagingSenderId: "655922410105",
+
+  appId: "1:655922410105:web:b0919370054af912261aa8",
+
+  measurementId: "G-PX7PE1V6S3"
+
+ 
+  };
+
+  // 初始化 Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // 这里将添加数据处理函数
+</script>
+    
+    
 </body>
 </html>
