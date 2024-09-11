@@ -137,18 +137,18 @@
                 <label for="name">Name</label>
                 <input type="text" id="name" required>
                 
-                <label for="studentId">studentId</label>
+                <label for="studentId">Student ID</label>
                 <input type="text" id="studentId" required>
                 
-                <label for="gender">gender</label>
+                <label for="gender">Gender</label>
                 <select id="gender" required>
                     <option value="">Please select</option>
                     <option value="male">Male</option>
-                    <option value="female">female</option>
-                    <option value="other">other</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
                 </select>
                 
-                <label for="age">age</label>
+                <label for="age">Age</label>
                 <input type="number" id="age" required>
                 
                 <button type="submit">Submit</button>
@@ -159,9 +159,9 @@
             <!-- 帖子将由JavaScript动态添加到这里 -->
         </div>
 
-        <div id="submit-container" style="text-align: center; margin-top: 20px;">
-    <button id="submit-survey" style="padding: 10px 20px; background-color: #0095f6; color: white; border: none; border-radius: 5px; font-weight: bold;">提交调查</button>
-</div>
+        <div id="submit-container" style="text-align: center; margin-top: 20px; display: none;">
+            <button id="submit-survey" style="padding: 10px 20px; background-color: #0095f6; color: white; border: none; border-radius: 5px; font-weight: bold;">提交调查</button>
+        </div>
     </div>
 
     <script>
@@ -204,7 +204,7 @@
             document.getElementById('posts').style.display = 'block';
             loadPosts();
         } catch (error) {
-            console.error("Error submitting data::", error);
+            console.error("Error submitting data:", error);
             alert('Error submitting data. Please try again.');
         }
     });
@@ -220,25 +220,26 @@
             postViewTimes[index] = Date.now();
         });
 
-        // 添加滚动事件监听器来跟踪查看时间
-        window.addEventListener('scroll', updateViewTimes);
+        // 添加滚动事件监听器来跟踪查看时间和显示提交按钮
+        window.addEventListener('scroll', handleScroll);
+        document.getElementById('submit-container').style.display = 'none'; // 初始隐藏提交按钮
     }
 
     function generateRandomPosts(count) {
-    const posts = [];
-    for (let i = 0; i < count; i++) {
-        posts.push({
-            id: i + 1, // 确保唯一id
-            username: `user${i + 1}`,
-            profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
-            postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
-            caption: `这是帖子 ${i + 1} 的说明文字。`,
-            likes: 0, // 初始点赞数为0
-            isAI: Math.random() < 0.5
-        });
+        const posts = [];
+        for (let i = 0; i < count; i++) {
+            posts.push({
+                id: i + 1, // 确保唯一id
+                username: `user${i + 1}`,
+                profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
+                postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
+                caption: `这是帖子 ${i + 1} 的说明文字。`,
+                likes: 0, // 初始点赞数为0
+                isAI: Math.random() < 0.5
+            });
+        }
+        return shuffleArray(posts);
     }
-    return shuffleArray(posts);
-}
 
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -291,46 +292,37 @@
         postViewTimes[postId] = Date.now(); // 重置查看时间
     }
 
+    function handleScroll() {
+        updateViewTimes();
+        checkScrollPosition();
+    }
+
+    function checkScrollPosition() {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+            document.getElementById('submit-container').style.display = 'block';
+        }
+    }
+
     function updateViewTimes() {
-    const posts = document.querySelectorAll('.post');
-    const viewportHeight = window.innerHeight;
-    let maxVisibleArea = 0;
-    let mostVisiblePostIndex = -1;
+        const posts = document.querySelectorAll('.post');
+        const viewportHeight = window.innerHeight;
 
-    posts.forEach((post, index) => {
-        const rect = post.getBoundingClientRect();
-        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
-        const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
+        posts.forEach((post, index) => {
+            const rect = post.getBoundingClientRect();
+            const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+            const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
 
-        if (visibleArea > maxVisibleArea) {
-            maxVisibleArea = visibleArea;
-            mostVisiblePostIndex = index;
-        }
-
-        // 如果帖子完全离开视口，结束其观看时间
-        if (visibleArea === 0 && postViewTimes[index]) {
-            const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-            updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
-            postViewTimes[index] = null;
-        }
-    });
-
-    // 只为最可见的帖子计时，且其可见面积必须超过60%
-    if (maxVisibleArea > 60) {
-        if (!postViewTimes[mostVisiblePostIndex]) {
-            postViewTimes[mostVisiblePostIndex] = Date.now();
-        }
-    } else {
-        // 如果没有帖子的可见面积超过50%，停止所有计时
-        Object.keys(postViewTimes).forEach(index => {
-            if (postViewTimes[index]) {
+            if (visibleArea > 0) {
+                if (!postViewTimes[index]) {
+                    postViewTimes[index] = Date.now();
+                }
+            } else if (postViewTimes[index]) {
                 const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                updatePostData(parseInt(index), parseInt(posts[index].querySelector('.post-likes').textContent), viewTime);
+                updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
                 postViewTimes[index] = null;
             }
         });
     }
-}
 
     async function updatePostData(postId, likes, viewTime) {
         try {
@@ -345,36 +337,31 @@
             console.error("更新帖子数据时出错:", error);
         }
     }
-
-    // 当用户滚动到底部时调用此函数
-    async function finishSurvey() {
+    
+    document.getElementById('submit-survey').addEventListener('click', async function() {
         updateViewTimes(); // 确保所有查看时间都被更新
+        
+        // 计算并更新所有仍在查看的帖子的时间
+        Object.keys(postViewTimes).forEach(index => {
+            if (postViewTimes[index]) {
+                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+                const post = document.querySelectorAll('.post')[index];
+                const likes = parseInt(post.querySelector('.post-likes').textContent);
+                updatePostData(parseInt(index), likes, viewTime);
+            }
+        });
+
         try {
             await db.collection('users').doc(userData.docId).update({
                 surveyCompleted: true
             });
             alert('感谢您完成调查！');
+            // 可以在这里添加重定向或其他结束调查的逻辑
         } catch (error) {
-            console.error("标记调查完成时出错:", error);
+            console.error("提交调查时出错:", error);
+            alert('提交调查时出错，请重试。');
         }
-    }
-
-        document.getElementById('submit-survey').addEventListener('click', async function() {
-    updateViewTimes(); // 确保所有查看时间都被更新
-    try {
-        await db.collection('users').doc(userData.docId).update({
-            surveyCompleted: true
-        });
-        alert('感谢您完成调查！');
-        // 可以在这里添加重定向或其他结束调查的逻辑
-    } catch (error) {
-        console.error("提交调查时出错:", error);
-        alert('提交调查时出错，请重试。');
-    }
-});
-
+    });
     </script>
-
-    
 </body>
 </html>
