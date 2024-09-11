@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户调查和图片浏览</title>
+    <title>User Survey and Image Browsing</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 414px; /* iPad竖屏宽度 */
+            max-width: 414px; /* iPad portrait width */
             margin: 0 auto;
             padding: 20px;
             background-color: #fafafa;
         }
-        #user-form {
+        #user-form, #posts, #thank-you {
             background-color: white;
             border-radius: 10px;
             padding: 20px;
@@ -132,36 +132,45 @@
     <div id="app">
         <div id="user-form">
             <div class="instagram-icon"></div>
-            <h2>用户信息</h2>
+            <h2>Please Fill in Your Information</h2>
             <form id="survey-form">
-                <label for="name">姓名</label>
+                <label for="name">Name</label>
                 <input type="text" id="name" required>
                 
-                <label for="studentId">学号</label>
+                <label for="studentId">Student ID</label>
                 <input type="text" id="studentId" required>
                 
-                <label for="gender">性别</label>
+                <label for="gender">Gender</label>
                 <select id="gender" required>
-                    <option value="">请选择性别</option>
-                    <option value="male">男</option>
-                    <option value="female">女</option>
-                    <option value="other">其他</option>
+                    <option value="">Please select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
                 </select>
                 
-                <label for="age">年龄</label>
+                <label for="age">Age</label>
                 <input type="number" id="age" required>
                 
-                <button type="submit">提交</button>
+                <button type="submit">Submit</button>
             </form>
         </div>
 
         <div id="posts" style="display: none;">
-            <!-- 帖子将由JavaScript动态添加到这里 -->
+            <!-- Posts will be dynamically added here by JavaScript -->
+        </div>
+
+        <div id="submit-container" style="text-align: center; margin-top: 20px; display: none;">
+            <button id="submit-survey" style="padding: 10px 20px; background-color: #0095f6; color: white; border: none; border-radius: 5px; font-weight: bold;">Submit Survey</button>
+        </div>
+
+        <div id="thank-you" style="display: none;">
+            <h2>Thank You for Participating in the Survey!</h2>
+            <p>Your responses have been recorded. We appreciate your time and feedback.</p>
         </div>
     </div>
 
     <script>
-    // Firebase配置
+    // Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
         authDomain: "research-project-0801.firebaseapp.com",
@@ -172,7 +181,7 @@
         measurementId: "G-PX7PE1V6S3"
     };
 
-    // 初始化Firebase
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -195,19 +204,18 @@
         try {
             const docRef = await db.collection('users').add(userData);
             userData.docId = docRef.id;
-            alert('用户信息提交成功！');
             document.getElementById('user-form').style.display = 'none';
             document.getElementById('posts').style.display = 'block';
             loadPosts();
         } catch (error) {
-            console.error("提交数据时出错:", error);
-            alert('提交数据时出错。请重试。');
+            console.error("Error submitting data:", error);
+            alert('Error submitting data. Please try again.');
         }
     });
 
     function loadPosts() {
         const postsContainer = document.getElementById('posts');
-        postsContainer.innerHTML = ''; // 清空现有的帖子
+        postsContainer.innerHTML = ''; // Clear existing posts
 
         const posts = generateRandomPosts(totalPosts);
         posts.forEach((post, index) => {
@@ -216,20 +224,22 @@
             postViewTimes[index] = Date.now();
         });
 
-        // 添加滚动事件监听器来跟踪查看时间
-        window.addEventListener('scroll', updateViewTimes);
+        // Add scroll event listener to track viewing time and show submit button
+        window.addEventListener('scroll', handleScroll);
+        document.getElementById('submit-container').style.display = 'none'; // Initially hide submit button
     }
 
     function generateRandomPosts(count) {
         const posts = [];
         for (let i = 0; i < count; i++) {
             posts.push({
+                id: i + 1, // Ensure unique id
                 username: `user${i + 1}`,
                 profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
                 postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
-                caption: `这是帖子 ${i + 1} 的说明文字。`,
-                likes: Math.floor(Math.random() * 1000),
-                isAI: Math.random() < 0.5 // 50%的概率是AI内容
+                caption: `This is the caption for post ${i + 1}.`,
+                likes: 0, // Initial likes set to 0
+                isAI: Math.random() < 0.5
             });
         }
         return shuffleArray(posts);
@@ -251,7 +261,7 @@
                 <img src="${post.profilePic}" alt="${post.username}">
                 <div>
                     <div class="post-username">${post.username}</div>
-                    ${post.isAI ? '<div class="post-ai-label">这是AI生成的内容</div>' : ''}
+                    ${post.isAI ? '<div class="post-ai-label">This is AI-generated content</div>' : ''}
                 </div>
             </div>
             <img class="post-image" src="${post.postImage}" alt="Post image">
@@ -260,7 +270,7 @@
                 <button>💬</button>
                 <button>✈️</button>
             </div>
-            <div class="post-likes">${post.likes} 赞</div>
+            <div class="post-likes">${post.likes} likes</div>
             <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
         `;
         return postElement;
@@ -279,29 +289,41 @@
             likes--;
         }
         
-        likesElement.textContent = `${likes} 赞`;
+        likesElement.textContent = `${likes} likes`;
 
         const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
         updatePostData(postId, likes, viewTime);
-        postViewTimes[postId] = Date.now(); // 重置查看时间
+        postViewTimes[postId] = Date.now(); // Reset view time
+    }
+
+    function handleScroll() {
+        updateViewTimes();
+        checkScrollPosition();
+    }
+
+    function checkScrollPosition() {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+            document.getElementById('submit-container').style.display = 'block';
+        }
     }
 
     function updateViewTimes() {
         const posts = document.querySelectorAll('.post');
+        const viewportHeight = window.innerHeight;
+
         posts.forEach((post, index) => {
             const rect = post.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom >= 0) {
-                // 帖子在视图中
+            const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+            const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
+
+            if (visibleArea > 0) {
                 if (!postViewTimes[index]) {
                     postViewTimes[index] = Date.now();
                 }
-            } else {
-                // 帖子不在视图中
-                if (postViewTimes[index]) {
-                    const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                    updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
-                    postViewTimes[index] = null;
-                }
+            } else if (postViewTimes[index]) {
+                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+                updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
+                postViewTimes[index] = null;
             }
         });
     }
@@ -316,27 +338,33 @@
                 })
             });
         } catch (error) {
-            console.error("更新帖子数据时出错:", error);
+            console.error("Error updating post data:", error);
         }
     }
+    
+    document.getElementById('submit-survey').addEventListener('click', async function() {
+        updateViewTimes(); // Ensure all viewing times are updated
+        
+        // Calculate and update times for all posts still being viewed
+        Object.keys(postViewTimes).forEach(index => {
+            if (postViewTimes[index]) {
+                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+                const post = document.querySelectorAll('.post')[index];
+                const likes = parseInt(post.querySelector('.post-likes').textContent);
+                updatePostData(parseInt(index), likes, viewTime);
+            }
+        });
 
-    // 当用户滚动到底部时调用此函数
-    async function finishSurvey() {
-        updateViewTimes(); // 确保所有查看时间都被更新
         try {
             await db.collection('users').doc(userData.docId).update({
                 surveyCompleted: true
             });
-            alert('感谢您完成调查！');
+            document.getElementById('posts').style.display = 'none';
+            document.getElementById('submit-container').style.display = 'none';
+            document.getElementById('thank-you').style.display = 'block';
         } catch (error) {
-            console.error("标记调查完成时出错:", error);
-        }
-    }
-
-    // 添加滚动事件监听器来检测用户是否滚动到底部
-    window.addEventListener('scroll', () => {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
-            finishSurvey();
+            console.error("Error submitting survey:", error);
+            alert('Error submitting survey. Please try again.');
         }
     });
     </script>
