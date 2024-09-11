@@ -169,6 +169,7 @@
         </div>
     </div>
 
+
     <script>
     let currentPage = localStorage.getItem('currentPage') || 'user-form';
         
@@ -218,16 +219,16 @@
 
        
 function showPage(pageId) {
-    document.getElementById('user-form').style.display = 'none';
-    document.getElementById('posts').style.display = 'none';
-    document.getElementById('thank-you').style.display = 'none';
-    document.getElementById('submit-container').style.display = 'none';
+        document.getElementById('user-form').style.display = 'none';
+        document.getElementById('posts').style.display = 'none';
+        document.getElementById('thank-you').style.display = 'none';
+        document.getElementById('submit-container').style.display = 'none';
 
-    document.getElementById(pageId).style.display = 'block';
-    if (pageId === 'posts') {
-        document.getElementById('submit-container').style.display = 'block';
+        document.getElementById(pageId).style.display = 'block';
+        if (pageId === 'posts') {
+            document.getElementById('submit-container').style.display = 'block';
+        }
     }
-}
 
         
     function loadPosts() {
@@ -357,8 +358,8 @@ function showPage(pageId) {
         }
     }
     
-    document.getElementById('submit-survey').addEventListener('click', async function() {
-    updateViewTimes(); // 确保所有查看时间都被更新
+     document.getElementById('submit-survey').addEventListener('click', async function() {
+        updateViewTimes(); // Ensure all view times are updated
     
     Object.keys(postViewTimes).forEach(index => {
         if (postViewTimes[index]) {
@@ -370,28 +371,30 @@ function showPage(pageId) {
     });
 
     try {
-        await db.collection('users').doc(userData.docId).update({
-            surveyCompleted: true
-        });
-        localStorage.setItem('currentPage', 'thank-you');
-        showPage('thank-you');
-    } catch (error) {
-        console.error("Error submitting survey:", error);
-        alert('Error submitting survey. Please try again.');
-    }
-});
+            await db.collection('users').doc(userData.docId).update({
+                surveyCompleted: true
+            });
+            localStorage.setItem('currentPage', 'thank-you');
+            showPage('thank-you');
+            document.getElementById('submit-container').style.display = 'none'; // Ensure submit button is hidden
+        } catch (error) {
+            console.error("Error submitting survey:", error);
+            alert('Error submitting survey. Please try again.');
+        }
+    });
 
-// 在 <script> 标签的末尾添加这段代码
 window.addEventListener('load', function() {
-    const savedUserData = localStorage.getItem('userData');
-    if (savedUserData) {
-        userData = JSON.parse(savedUserData);
-    }
-    showPage(currentPage);
-    if (currentPage === 'posts') {
-        loadPosts();
-    }
-});
+        const savedUserData = localStorage.getItem('userData');
+        if (savedUserData) {
+            userData = JSON.parse(savedUserData);
+        }
+        showPage(currentPage);
+        if (currentPage === 'posts') {
+            loadPosts();
+        } else if (currentPage === 'thank-you') {
+            document.getElementById('submit-container').style.display = 'none'; // Ensure submit button is hidden when loading thank-you page
+        }
+    });
     </script>
 </body>
 </html>
