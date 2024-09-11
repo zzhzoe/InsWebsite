@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户调查与图片浏览</title>
+    <title>User Survey and Image Browsing</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
@@ -16,30 +16,30 @@
 <body>
     <div id="app">
         <div id="user-form" style="display: block;">
-            <h2>请填写您的信息</h2>
+            <h2>Please Fill in Your Information</h2>
             <form id="survey-form">
-                <label for="name">姓名：</label>
+                <label for="name">Name:</label>
                 <input type="text" id="name" required><br><br>
-                <label for="age">年龄：</label>
+                <label for="age">Age:</label>
                 <input type="number" id="age" required><br><br>
-                <label for="gender">性别：</label>
+                <label for="gender">Gender:</label>
                 <select id="gender" required>
-                    <option value="">请选择</option>
-                    <option value="male">男</option>
-                    <option value="female">女</option>
-                    <option value="other">其他</option>
+                    <option value="">Please select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
                 </select><br><br>
-                <button type="submit">提交</button>
+                <button type="submit">Submit</button>
             </form>
         </div>
 
         <div id="posts" style="display: none;">
-            <!-- 这里将通过JavaScript动态添加帖子 -->
+            <!-- Posts will be dynamically added here by JavaScript -->
         </div>
     </div>
 
     <script>
-    // Firebase 配置
+    // Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
         authDomain: "research-project-0801.firebaseapp.com",
@@ -50,7 +50,7 @@
         measurementId: "G-PX7PE1V6S3"
     };
 
-    // 初始化 Firebase
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -61,7 +61,7 @@
 
     document.getElementById('survey-form').addEventListener('submit', async function(e) {
         e.preventDefault();
-        console.log("表单提交被触发");
+        console.log("Form submission triggered");
         
         userData = {
             name: document.getElementById('name').value,
@@ -71,35 +71,40 @@
             posts: []
         };
         
-        console.log("用户数据:", userData);
+        console.log("User data:", userData);
 
         try {
             const docRef = await db.collection('users').add(userData);
             console.log("Document written with ID: ", docRef.id);
-            alert('用户信息已成功提交！');
+            userData.docId = docRef.id; // Save document ID for later updates
+            alert('User information submitted successfully!');
             document.getElementById('user-form').style.display = 'none';
             document.getElementById('posts').style.display = 'block';
+            console.log("Preparing to show posts");
             showNextPost();
         } catch (error) {
-            console.error("Error adding document: ", error);
-            alert('提交数据时出错，请重试。');
+            console.error("Error submitting data:", error);
+            alert('Error submitting data. Please try again.');
         }
     });
 
     function showNextPost() {
+        console.log("showNextPost called, current post:", currentPost);
         if (currentPost < totalPosts) {
             const postElement = document.createElement('div');
             postElement.className = 'post';
             postElement.innerHTML = `
                 <h3>Post ${currentPost + 1}</h3>
                 <img src="https://via.placeholder.com/400" alt="Post ${currentPost + 1}">
-                <button class="like-btn" onclick="likePost(${currentPost})">赞</button>
+                <button class="like-btn" onclick="likePost(${currentPost})">Like</button>
             `;
             document.getElementById('posts').innerHTML = '';
             document.getElementById('posts').appendChild(postElement);
+            console.log("Post added to DOM");
             startTime = Date.now();
             currentPost++;
         } else {
+            console.log("All posts have been displayed");
             finishSurvey();
         }
     }
@@ -127,7 +132,7 @@
     }
 
     async function finishSurvey() {
-        document.getElementById('posts').innerHTML = '<h2>感谢您完成调查！</h2>';
+        document.getElementById('posts').innerHTML = '<h2>Thank you for completing the survey!</h2>';
         console.log("Survey completed. Final user data:", userData);
         try {
             await db.collection('users').doc(userData.docId).update({
