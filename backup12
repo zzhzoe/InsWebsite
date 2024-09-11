@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Survey and Image Browsing</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .post { border: 1px solid #ddd; margin-bottom: 20px; padding: 10px; }
+        .post img { max-width: 100%; }
+        .like-btn { background-color: #3897f0; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="user-form" style="display: block;">
+            <h2>Please Fill in Your Information</h2>
+            <form id="survey-form">
+                <label for="name">Name:</label>
+                <input type="text" id="name" required><br><br>
+                <label for="age">Age:</label>
+                <input type="number" id="age" required><br><br>
+                <label for="gender">Gender:</label>
+                <select id="gender" required>
+                    <option value="">Please select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select><br><br>
+                <button type="submit">Submit</button>
+            </form>
+        </div>
+
+        <div id="posts" style="display: none;">
+            <!-- Posts will be dynamically added here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
+        authDomain: "research-project-0801.firebaseapp.com",
+        projectId: "research-project-0801",
+        storageBucket: "research-project-0801.appspot.com",
+        messagingSenderId: "655922410105",
+        appId: "1:655922410105:web:b0919370054af912261aa8",
+        measurementId: "G-PX7PE1V6S3"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let userData = {};
+    let currentPost = 0;
+    const totalPosts = 10;
+    let startTime;
+
+    document.getElementById('survey-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    userData = {
+        name: document.getElementById('name').value,
+        studentId: document.getElementById('studentId').value,
+        gender: document.getElementById('gender').value,
+        age: parseInt(document.getElementById('age').value),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        posts: []
+    };
+    
+    try {
+        const docRef = await db.collection('users').add(userData);
+        userData.docId = docRef.id;
+        alert('用户信息提交成功！');
+        document.getElementById('user-form').style.display = 'none';
+        document.getElementById('posts').style.display = 'block';
+        loadPosts();
+    } catch (error) {
+        console.error("提交数据时出错:", error);
+        alert('提交数据时出错。请重试。');
+    }
+});
+
+function loadPosts() {
+    const postsContainer = document.getElementById('posts');
+    postsContainer.innerHTML = ''; // 清空现有的帖子（如果有的话）
+    for (let i = 0; i < totalPosts; i++) {
+        const postElement = document.createElement('div');
+        postElement.className = 'post';
+        postElement.innerHTML = `
+            <h3>帖子 ${i + 1}</h3>
+            <img src="https://via.placeholder.com/400" alt="帖子 ${i + 1}">
+            <button class="like-btn" onclick="likePost(${i})">赞</button>
+        `;
+        postsContainer.appendChild(postElement);
+        postViewTimes[i] = Date.now();
+    }
+    
+    // 添加滚动事件监听器来跟踪查看时间
+    window.addEventListener('scroll', updateViewTimes);
+}
+
+    async function likePost(postId) {
+    const viewTime = (Date.now() - startTime) / 1000;
+    console.log(`Liking post ${postId}, view time: ${viewTime} seconds`);
+    
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            posts: firebase.firestore.FieldValue.arrayUnion({
+                id: postId,
+                liked: true,
+                viewTime: viewTime
+            })
+        });
+        console.log("Post data updated successfully");
+    } catch (error) {
+        console.error("Error updating post data: ", error);
+    }
+    showNextPost();
+}
+
+    async function finishSurvey() {
+    document.getElementById('posts').innerHTML = '<h2>Thank you for completing the survey!</h2>';
+    console.log("Survey completed. Final user data:", userData);
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true
+        });
+        console.log("Survey marked as completed in Firestore");
+    } catch (error) {
+        console.error("Error marking survey as completed: ", error);
+    }
+}
+    </script>
+</body>
+</html>
