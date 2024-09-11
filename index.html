@@ -359,13 +359,6 @@
         }
     }
 
-    // 添加滚动事件监听器来检测用户是否滚动到底部
-    window.addEventListener('scroll', () => {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
-            finishSurvey();
-        }
-    });
-
         document.getElementById('submit-survey').addEventListener('click', async function() {
     updateViewTimes(); // 确保所有查看时间都被更新
     try {
@@ -380,8 +373,6 @@
     }
 });
 
-// 移除之前的自动结束调查的代码
-window.removeEventListener('scroll', finishSurvey);
     </script>
 
     
