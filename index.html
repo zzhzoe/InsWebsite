@@ -169,9 +169,11 @@
         </div>
     </div>
 
-
     <script>
     let currentPage = localStorage.getItem('currentPage') || 'user-form';
+    let userData = {};
+    const totalPosts = 10;
+    let postViewTimes = {};
         
     // Firebase configuration
     const firebaseConfig = {
@@ -188,37 +190,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let userData = {};
-    const totalPosts = 10;
-    let postViewTimes = {};
-
-  document.getElementById('survey-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    userData = {
-        name: document.getElementById('name').value,
-        studentId: document.getElementById('studentId').value,
-        gender: document.getElementById('gender').value,
-        age: parseInt(document.getElementById('age').value),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        posts: []
-    };
-    
-    try {
-        const docRef = await db.collection('users').add(userData);
-        userData.docId = docRef.id;
-        localStorage.setItem('userData', JSON.stringify(userData));
-        localStorage.setItem('currentPage', 'posts');
-        showPage('posts');
-        loadPosts();
-    } catch (error) {
-        console.error("Error submitting data:", error);
-        alert('Error submitting data. Please try again.');
-    }
-});
-
-       
-function showPage(pageId) {
+    function showPage(pageId) {
         document.getElementById('user-form').style.display = 'none';
         document.getElementById('posts').style.display = 'none';
         document.getElementById('thank-you').style.display = 'none';
@@ -230,31 +202,55 @@ function showPage(pageId) {
         }
     }
 
+    document.getElementById('survey-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-    function loadPosts() {
-    const postsContainer = document.getElementById('posts');
-    postsContainer.innerHTML = ''; // 清空现有的帖子
-
-    const posts = generateRandomPosts(totalPosts);
-    posts.forEach((post, index) => {
-        const postElement = createPostElement(post, index);
-        postsContainer.appendChild(postElement);
-        postViewTimes[index] = Date.now();
+        userData = {
+            name: document.getElementById('name').value,
+            studentId: document.getElementById('studentId').value,
+            gender: document.getElementById('gender').value,
+            age: parseInt(document.getElementById('age').value),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            posts: []
+        };
+        
+        try {
+            const docRef = await db.collection('users').add(userData);
+            userData.docId = docRef.id;
+            localStorage.setItem('userData', JSON.stringify(userData));
+            localStorage.setItem('currentPage', 'posts');
+            showPage('posts');
+            loadPosts();
+        } catch (error) {
+            console.error("Error submitting data:", error);
+            alert('Error submitting data. Please try again.');
+        }
     });
+       
+    function loadPosts() {
+        const postsContainer = document.getElementById('posts');
+        postsContainer.innerHTML = ''; // Clear existing posts
 
-    window.addEventListener('scroll', handleScroll);
-}
+        const posts = generateRandomPosts(totalPosts);
+        posts.forEach((post, index) => {
+            const postElement = createPostElement(post, index);
+            postsContainer.appendChild(postElement);
+            postViewTimes[index] = Date.now();
+        });
+
+        window.addEventListener('scroll', handleScroll);
+    }
 
     function generateRandomPosts(count) {
         const posts = [];
         for (let i = 0; i < count; i++) {
             posts.push({
-                id: i + 1, // Ensure unique id
+                id: i + 1,
                 username: `user${i + 1}`,
                 profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
                 postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
                 caption: `This is the caption for post ${i + 1}.`,
-                likes: 0, // Initial likes set to 0
+                likes: 0,
                 isAI: Math.random() < 0.5
             });
         }
@@ -358,41 +354,43 @@ function showPage(pageId) {
         }
     }
     
-     document.getElementById('submit-survey').addEventListener('click', async function() {
+    document.getElementById('submit-survey').addEventListener('click', async function() {
         updateViewTimes(); // Ensure all view times are updated
-    
-    Object.keys(postViewTimes).forEach(index => {
-        if (postViewTimes[index]) {
-            const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-            const post = document.querySelectorAll('.post')[index];
-            const likes = parseInt(post.querySelector('.post-likes').textContent);
-            updatePostData(parseInt(index), likes, viewTime);
-        }
-    });
+        
+        Object.keys(postViewTimes).forEach(index => {
+            if (postViewTimes[index]) {
+                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+                const post = document.querySelectorAll('.post')[index];
+                const likes = parseInt(post.querySelector('.post-likes').textContent);
+                updatePostData(parseInt(index), likes, viewTime);
+            }
+        });
 
-    try {
+        try {
             await db.collection('users').doc(userData.docId).update({
                 surveyCompleted: true
             });
-            localStorage.setItem('currentPage', 'thank-you');
+            localStorage.removeItem('userData');
+            localStorage.removeItem('currentPage');
             showPage('thank-you');
-            document.getElementById('submit-container').style.display = 'none'; // Ensure submit button is hidden
         } catch (error) {
             console.error("Error submitting survey:", error);
             alert('Error submitting survey. Please try again.');
         }
     });
 
-window.addEventListener('load', function() {
+    window.addEventListener('load', function() {
         const savedUserData = localStorage.getItem('userData');
-        if (savedUserData) {
+        
+        if (currentPage === 'posts' && savedUserData) {
             userData = JSON.parse(savedUserData);
-        }
-        showPage(currentPage);
-        if (currentPage === 'posts') {
+            showPage('posts');
             loadPosts();
-        } else if (currentPage === 'thank-you') {
-            document.getElementById('submit-container').style.display = 'none'; // Ensure submit button is hidden when loading thank-you page
+        } else {
+            // Reset state for other pages
+            localStorage.removeItem('userData');
+            localStorage.removeItem('currentPage');
+            showPage('user-form');
         }
     });
     </script>
