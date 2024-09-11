@@ -161,14 +161,15 @@
     </div>
 
     <script>
-    // Firebase配置（请替换为您的配置）
+    // Firebase配置
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_AUTH_DOMAIN",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID"
+        apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
+        authDomain: "research-project-0801.firebaseapp.com",
+        projectId: "research-project-0801",
+        storageBucket: "research-project-0801.appspot.com",
+        messagingSenderId: "655922410105",
+        appId: "1:655922410105:web:b0919370054af912261aa8",
+        measurementId: "G-PX7PE1V6S3"
     };
 
     // 初始化Firebase
