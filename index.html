@@ -132,26 +132,21 @@
     <div id="app">
         <div id="user-form">
             <div class="instagram-icon"></div>
-            <h2>用户信息</h2>
+            <h2>Please Fill in Your Information</h2>
             <form id="survey-form">
-                <label for="name">姓名</label>
+                <label for="name">Name</label>
                 <input type="text" id="name" required>
-                
-                <label for="studentId">学号</label>
-                <input type="text" id="studentId" required>
-                
-                <label for="gender">性别</label>
+                <label for="age">Age:</label>
+                <input type="number" id="age" required><br><br>
+               <label for="gender">Gender:</label>
                 <select id="gender" required>
-                    <option value="">请选择性别</option>
-                    <option value="male">男</option>
-                    <option value="female">女</option>
-                    <option value="other">其他</option>
-                </select>
+                    <option value="">Please select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select><br><br>
                 
-                <label for="age">年龄</label>
-                <input type="number" id="age" required>
-                
-                <button type="submit">提交</button>
+                 <button type="submit">Submit</button>
             </form>
         </div>
 
@@ -195,13 +190,13 @@
         try {
             const docRef = await db.collection('users').add(userData);
             userData.docId = docRef.id;
-            alert('用户信息提交成功！');
+            alert('User information submitted successfully!');
             document.getElementById('user-form').style.display = 'none';
             document.getElementById('posts').style.display = 'block';
             loadPosts();
         } catch (error) {
-            console.error("提交数据时出错:", error);
-            alert('提交数据时出错。请重试。');
+            console.error("Error submitting data::", error);
+            alert('Error submitting data. Please try again.');
         }
     });
 
