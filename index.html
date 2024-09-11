@@ -158,6 +158,10 @@
         <div id="posts" style="display: none;">
             <!-- 帖子将由JavaScript动态添加到这里 -->
         </div>
+
+        <div id="submit-container" style="text-align: center; margin-top: 20px;">
+    <button id="submit-survey" style="padding: 10px 20px; background-color: #0095f6; color: white; border: none; border-radius: 5px; font-weight: bold;">提交调查</button>
+</div>
     </div>
 
     <script>
@@ -221,19 +225,20 @@
     }
 
     function generateRandomPosts(count) {
-        const posts = [];
-        for (let i = 0; i < count; i++) {
-            posts.push({
-                username: `user${i + 1}`,
-                profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
-                postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
-                caption: `这是帖子 ${i + 1} 的说明文字。`,
-                likes: Math.floor(Math.random() * 1000),
-                isAI: Math.random() < 0.5 // 50%的概率是AI内容
-            });
-        }
-        return shuffleArray(posts);
+    const posts = [];
+    for (let i = 0; i < count; i++) {
+        posts.push({
+            id: i + 1, // 确保唯一id
+            username: `user${i + 1}`,
+            profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
+            postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
+            caption: `这是帖子 ${i + 1} 的说明文字。`,
+            likes: 0, // 初始点赞数为0
+            isAI: Math.random() < 0.5
+        });
     }
+    return shuffleArray(posts);
+}
 
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -360,6 +365,25 @@
             finishSurvey();
         }
     });
+
+        document.getElementById('submit-survey').addEventListener('click', async function() {
+    updateViewTimes(); // 确保所有查看时间都被更新
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true
+        });
+        alert('感谢您完成调查！');
+        // 可以在这里添加重定向或其他结束调查的逻辑
+    } catch (error) {
+        console.error("提交调查时出错:", error);
+        alert('提交调查时出错，请重试。');
+    }
+});
+
+// 移除之前的自动结束调查的代码
+window.removeEventListener('scroll', finishSurvey);
     </script>
+
+    
 </body>
 </html>
