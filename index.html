@@ -287,24 +287,45 @@
     }
 
     function updateViewTimes() {
-        const posts = document.querySelectorAll('.post');
-        posts.forEach((post, index) => {
-            const rect = post.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom >= 0) {
-                // 帖子在视图中
-                if (!postViewTimes[index]) {
-                    postViewTimes[index] = Date.now();
-                }
-            } else {
-                // 帖子不在视图中
-                if (postViewTimes[index]) {
-                    const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                    updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
-                    postViewTimes[index] = null;
-                }
+    const posts = document.querySelectorAll('.post');
+    const viewportHeight = window.innerHeight;
+    let maxVisibleArea = 0;
+    let mostVisiblePostIndex = -1;
+
+    posts.forEach((post, index) => {
+        const rect = post.getBoundingClientRect();
+        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+        const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
+
+        if (visibleArea > maxVisibleArea) {
+            maxVisibleArea = visibleArea;
+            mostVisiblePostIndex = index;
+        }
+
+        // 如果帖子完全离开视口，结束其观看时间
+        if (visibleArea === 0 && postViewTimes[index]) {
+            const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+            updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
+            postViewTimes[index] = null;
+        }
+    });
+
+    // 只为最可见的帖子计时，且其可见面积必须超过60%
+    if (maxVisibleArea > 60) {
+        if (!postViewTimes[mostVisiblePostIndex]) {
+            postViewTimes[mostVisiblePostIndex] = Date.now();
+        }
+    } else {
+        // 如果没有帖子的可见面积超过50%，停止所有计时
+        Object.keys(postViewTimes).forEach(index => {
+            if (postViewTimes[index]) {
+                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+                updatePostData(parseInt(index), parseInt(posts[index].querySelector('.post-likes').textContent), viewTime);
+                postViewTimes[index] = null;
             }
         });
     }
+}
 
     async function updatePostData(postId, likes, viewTime) {
         try {
