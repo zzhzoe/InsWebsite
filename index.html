@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户调查和图片浏览</title>
+    <title>User Survey and Image Browsing</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 414px; /* iPad竖屏宽度 */
+            max-width: 414px; /* iPad portrait width */
             margin: 0 auto;
             padding: 20px;
             background-color: #fafafa;
         }
-        #user-form {
+        #user-form, #posts, #thank-you {
             background-color: white;
             border-radius: 10px;
             padding: 20px;
@@ -156,16 +156,21 @@
         </div>
 
         <div id="posts" style="display: none;">
-            <!-- 帖子将由JavaScript动态添加到这里 -->
+            <!-- Posts will be dynamically added here by JavaScript -->
         </div>
 
         <div id="submit-container" style="text-align: center; margin-top: 20px; display: none;">
-            <button id="submit-survey" style="padding: 10px 20px; background-color: #0095f6; color: white; border: none; border-radius: 5px; font-weight: bold;">提交调查</button>
+            <button id="submit-survey" style="padding: 10px 20px; background-color: #0095f6; color: white; border: none; border-radius: 5px; font-weight: bold;">Submit Survey</button>
+        </div>
+
+        <div id="thank-you" style="display: none;">
+            <h2>Thank You for Participating in the Survey!</h2>
+            <p>Your responses have been recorded. We appreciate your time and feedback.</p>
         </div>
     </div>
 
     <script>
-    // Firebase配置
+    // Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
         authDomain: "research-project-0801.firebaseapp.com",
@@ -176,7 +181,7 @@
         measurementId: "G-PX7PE1V6S3"
     };
 
-    // 初始化Firebase
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -199,7 +204,6 @@
         try {
             const docRef = await db.collection('users').add(userData);
             userData.docId = docRef.id;
-            alert('User information submitted successfully!');
             document.getElementById('user-form').style.display = 'none';
             document.getElementById('posts').style.display = 'block';
             loadPosts();
@@ -211,7 +215,7 @@
 
     function loadPosts() {
         const postsContainer = document.getElementById('posts');
-        postsContainer.innerHTML = ''; // 清空现有的帖子
+        postsContainer.innerHTML = ''; // Clear existing posts
 
         const posts = generateRandomPosts(totalPosts);
         posts.forEach((post, index) => {
@@ -220,21 +224,21 @@
             postViewTimes[index] = Date.now();
         });
 
-        // 添加滚动事件监听器来跟踪查看时间和显示提交按钮
+        // Add scroll event listener to track viewing time and show submit button
         window.addEventListener('scroll', handleScroll);
-        document.getElementById('submit-container').style.display = 'none'; // 初始隐藏提交按钮
+        document.getElementById('submit-container').style.display = 'none'; // Initially hide submit button
     }
 
     function generateRandomPosts(count) {
         const posts = [];
         for (let i = 0; i < count; i++) {
             posts.push({
-                id: i + 1, // 确保唯一id
+                id: i + 1, // Ensure unique id
                 username: `user${i + 1}`,
                 profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
                 postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
-                caption: `这是帖子 ${i + 1} 的说明文字。`,
-                likes: 0, // 初始点赞数为0
+                caption: `This is the caption for post ${i + 1}.`,
+                likes: 0, // Initial likes set to 0
                 isAI: Math.random() < 0.5
             });
         }
@@ -257,7 +261,7 @@
                 <img src="${post.profilePic}" alt="${post.username}">
                 <div>
                     <div class="post-username">${post.username}</div>
-                    ${post.isAI ? '<div class="post-ai-label">这是AI生成的内容</div>' : ''}
+                    ${post.isAI ? '<div class="post-ai-label">This is AI-generated content</div>' : ''}
                 </div>
             </div>
             <img class="post-image" src="${post.postImage}" alt="Post image">
@@ -266,7 +270,7 @@
                 <button>💬</button>
                 <button>✈️</button>
             </div>
-            <div class="post-likes">${post.likes} 赞</div>
+            <div class="post-likes">${post.likes} likes</div>
             <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
         `;
         return postElement;
@@ -285,11 +289,11 @@
             likes--;
         }
         
-        likesElement.textContent = `${likes} 赞`;
+        likesElement.textContent = `${likes} likes`;
 
         const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
         updatePostData(postId, likes, viewTime);
-        postViewTimes[postId] = Date.now(); // 重置查看时间
+        postViewTimes[postId] = Date.now(); // Reset view time
     }
 
     function handleScroll() {
@@ -334,14 +338,14 @@
                 })
             });
         } catch (error) {
-            console.error("更新帖子数据时出错:", error);
+            console.error("Error updating post data:", error);
         }
     }
     
     document.getElementById('submit-survey').addEventListener('click', async function() {
-        updateViewTimes(); // 确保所有查看时间都被更新
+        updateViewTimes(); // Ensure all viewing times are updated
         
-        // 计算并更新所有仍在查看的帖子的时间
+        // Calculate and update times for all posts still being viewed
         Object.keys(postViewTimes).forEach(index => {
             if (postViewTimes[index]) {
                 const viewTime = (Date.now() - postViewTimes[index]) / 1000;
@@ -355,11 +359,12 @@
             await db.collection('users').doc(userData.docId).update({
                 surveyCompleted: true
             });
-            alert('感谢您完成调查！');
-            // 可以在这里添加重定向或其他结束调查的逻辑
+            document.getElementById('posts').style.display = 'none';
+            document.getElementById('submit-container').style.display = 'none';
+            document.getElementById('thank-you').style.display = 'block';
         } catch (error) {
-            console.error("提交调查时出错:", error);
-            alert('提交调查时出错，请重试。');
+            console.error("Error submitting survey:", error);
+            alert('Error submitting survey. Please try again.');
         }
     });
     </script>
