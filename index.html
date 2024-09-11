@@ -170,6 +170,8 @@
     </div>
 
     <script>
+    let currentPage = localStorage.getItem('currentPage') || 'user-form';
+        
     // Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
@@ -189,45 +191,58 @@
     const totalPosts = 10;
     let postViewTimes = {};
 
-    document.getElementById('survey-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
+  document.getElementById('survey-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    userData = {
+        name: document.getElementById('name').value,
+        studentId: document.getElementById('studentId').value,
+        gender: document.getElementById('gender').value,
+        age: parseInt(document.getElementById('age').value),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        posts: []
+    };
+    
+    try {
+        const docRef = await db.collection('users').add(userData);
+        userData.docId = docRef.id;
+        localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.setItem('currentPage', 'posts');
+        showPage('posts');
+        loadPosts();
+    } catch (error) {
+        console.error("Error submitting data:", error);
+        alert('Error submitting data. Please try again.');
+    }
+});
+
+       
+function showPage(pageId) {
+    document.getElementById('user-form').style.display = 'none';
+    document.getElementById('posts').style.display = 'none';
+    document.getElementById('thank-you').style.display = 'none';
+    document.getElementById('submit-container').style.display = 'none';
+
+    document.getElementById(pageId).style.display = 'block';
+    if (pageId === 'posts') {
+        document.getElementById('submit-container').style.display = 'none'; // 初始隐藏提交按钮
+    }
+}
+
         
-        userData = {
-            name: document.getElementById('name').value,
-            studentId: document.getElementById('studentId').value,
-            gender: document.getElementById('gender').value,
-            age: parseInt(document.getElementById('age').value),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            posts: []
-        };
-        
-        try {
-            const docRef = await db.collection('users').add(userData);
-            userData.docId = docRef.id;
-            document.getElementById('user-form').style.display = 'none';
-            document.getElementById('posts').style.display = 'block';
-            loadPosts();
-        } catch (error) {
-            console.error("Error submitting data:", error);
-            alert('Error submitting data. Please try again.');
-        }
+    function loadPosts() {
+    const postsContainer = document.getElementById('posts');
+    postsContainer.innerHTML = ''; // 清空现有的帖子
+
+    const posts = generateRandomPosts(totalPosts);
+    posts.forEach((post, index) => {
+        const postElement = createPostElement(post, index);
+        postsContainer.appendChild(postElement);
+        postViewTimes[index] = Date.now();
     });
 
-    function loadPosts() {
-        const postsContainer = document.getElementById('posts');
-        postsContainer.innerHTML = ''; // Clear existing posts
-
-        const posts = generateRandomPosts(totalPosts);
-        posts.forEach((post, index) => {
-            const postElement = createPostElement(post, index);
-            postsContainer.appendChild(postElement);
-            postViewTimes[index] = Date.now();
-        });
-
-        // Add scroll event listener to track viewing time and show submit button
-        window.addEventListener('scroll', handleScroll);
-        document.getElementById('submit-container').style.display = 'none'; // Initially hide submit button
-    }
+    window.addEventListener('scroll', handleScroll);
+}
 
     function generateRandomPosts(count) {
         const posts = [];
@@ -343,30 +358,40 @@
     }
     
     document.getElementById('submit-survey').addEventListener('click', async function() {
-        updateViewTimes(); // Ensure all viewing times are updated
-        
-        // Calculate and update times for all posts still being viewed
-        Object.keys(postViewTimes).forEach(index => {
-            if (postViewTimes[index]) {
-                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                const post = document.querySelectorAll('.post')[index];
-                const likes = parseInt(post.querySelector('.post-likes').textContent);
-                updatePostData(parseInt(index), likes, viewTime);
-            }
-        });
-
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                surveyCompleted: true
-            });
-            document.getElementById('posts').style.display = 'none';
-            document.getElementById('submit-container').style.display = 'none';
-            document.getElementById('thank-you').style.display = 'block';
-        } catch (error) {
-            console.error("Error submitting survey:", error);
-            alert('Error submitting survey. Please try again.');
+    updateViewTimes(); // 确保所有查看时间都被更新
+    
+    Object.keys(postViewTimes).forEach(index => {
+        if (postViewTimes[index]) {
+            const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+            const post = document.querySelectorAll('.post')[index];
+            const likes = parseInt(post.querySelector('.post-likes').textContent);
+            updatePostData(parseInt(index), likes, viewTime);
         }
     });
+
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true
+        });
+        localStorage.setItem('currentPage', 'thank-you');
+        showPage('thank-you');
+    } catch (error) {
+        console.error("Error submitting survey:", error);
+        alert('Error submitting survey. Please try again.');
+    }
+});
+
+// 在 <script> 标签的末尾添加这段代码
+window.addEventListener('load', function() {
+    const savedUserData = localStorage.getItem('userData');
+    if (savedUserData) {
+        userData = JSON.parse(savedUserData);
+    }
+    showPage(currentPage);
+    if (currentPage === 'posts') {
+        loadPosts();
+    }
+});
     </script>
 </body>
 </html>
