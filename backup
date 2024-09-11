@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户调查和图片浏览</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 414px; /* iPad竖屏宽度 */
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fafafa;
+        }
+        #user-form {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #262626;
+        }
+        .instagram-icon {
+            display: block;
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 20px;
+            background-color: #833AB4;
+            border-radius: 12px;
+            position: relative;
+        }
+        .instagram-icon::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 25px;
+            height: 25px;
+            border: 3px solid white;
+            border-radius: 8px;
+        }
+        .instagram-icon::after {
+            content: "";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 15px;
+            color: #262626;
+            font-weight: bold;
+        }
+        input, select {
+            margin-top: 5px;
+            padding: 10px;
+            border: 1px solid #dbdbdb;
+            border-radius: 3px;
+            background-color: #fafafa;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #0095f6;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .post {
+            background-color: white;
+            border: 1px solid #dbdbdb;
+            margin-bottom: 20px;
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+        }
+        .post-header img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .post-username {
+            font-weight: bold;
+        }
+        .post-ai-label {
+            font-size: 0.8em;
+            color: #8e8e8e;
+            margin-top: 2px;
+        }
+        .post-image {
+            width: 100%;
+            height: auto;
+        }
+        .post-actions {
+            display: flex;
+            padding: 10px;
+        }
+        .post-actions button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        .post-likes {
+            font-weight: bold;
+            padding: 0 10px;
+        }
+        .post-caption {
+            padding: 0 10px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="user-form">
+            <div class="instagram-icon"></div>
+            <h2>用户信息</h2>
+            <form id="survey-form">
+                <label for="name">姓名</label>
+                <input type="text" id="name" required>
+                
+                <label for="studentId">学号</label>
+                <input type="text" id="studentId" required>
+                
+                <label for="gender">性别</label>
+                <select id="gender" required>
+                    <option value="">请选择性别</option>
+                    <option value="male">男</option>
+                    <option value="female">女</option>
+                    <option value="other">其他</option>
+                </select>
+                
+                <label for="age">年龄</label>
+                <input type="number" id="age" required>
+                
+                <button type="submit">提交</button>
+            </form>
+        </div>
+
+        <div id="posts" style="display: none;">
+            <!-- 帖子将由JavaScript动态添加到这里 -->
+        </div>
+    </div>
+
+    <script>
+    // Firebase配置（请替换为您的配置）
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // 初始化Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let userData = {};
+    const totalPosts = 10;
+    let postViewTimes = {};
+
+    document.getElementById('survey-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        userData = {
+            name: document.getElementById('name').value,
+            studentId: document.getElementById('studentId').value,
+            gender: document.getElementById('gender').value,
+            age: parseInt(document.getElementById('age').value),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            posts: []
+        };
+        
+        try {
+            const docRef = await db.collection('users').add(userData);
+            userData.docId = docRef.id;
+            alert('用户信息提交成功！');
+            document.getElementById('user-form').style.display = 'none';
+            document.getElementById('posts').style.display = 'block';
+            loadPosts();
+        } catch (error) {
+            console.error("提交数据时出错:", error);
+            alert('提交数据时出错。请重试。');
+        }
+    });
+
+    function loadPosts() {
+        const postsContainer = document.getElementById('posts');
+        postsContainer.innerHTML = ''; // 清空现有的帖子
+
+        const posts = generateRandomPosts(totalPosts);
+        posts.forEach((post, index) => {
+            const postElement = createPostElement(post, index);
+            postsContainer.appendChild(postElement);
+            postViewTimes[index] = Date.now();
+        });
+
+        // 添加滚动事件监听器来跟踪查看时间
+        window.addEventListener('scroll', updateViewTimes);
+    }
+
+    function generateRandomPosts(count) {
+        const posts = [];
+        for (let i = 0; i < count; i++) {
+            posts.push({
+                username: `user${i + 1}`,
+                profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
+                postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
+                caption: `这是帖子 ${i + 1} 的说明文字。`,
+                likes: Math.floor(Math.random() * 1000),
+                isAI: Math.random() < 0.5 // 50%的概率是AI内容
+            });
+        }
+        return shuffleArray(posts);
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function createPostElement(post, index) {
+        const postElement = document.createElement('div');
+        postElement.className = 'post';
+        postElement.innerHTML = `
+            <div class="post-header">
+                <img src="${post.profilePic}" alt="${post.username}">
+                <div>
+                    <div class="post-username">${post.username}</div>
+                    ${post.isAI ? '<div class="post-ai-label">这是AI生成的内容</div>' : ''}
+                </div>
+            </div>
+            <img class="post-image" src="${post.postImage}" alt="Post image">
+            <div class="post-actions">
+                <button onclick="likePost(${index})">❤️</button>
+                <button>💬</button>
+                <button>✈️</button>
+            </div>
+            <div class="post-likes">${post.likes} 赞</div>
+            <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
+        `;
+        return postElement;
+    }
+
+    async function likePost(postId) {
+        const likeButton = document.querySelector(`.post:nth-child(${postId + 1}) .post-actions button:first-child`);
+        const likesElement = document.querySelector(`.post:nth-child(${postId + 1}) .post-likes`);
+        let likes = parseInt(likesElement.textContent);
+        
+        if (likeButton.textContent === '❤️') {
+            likeButton.textContent = '💗';
+            likes++;
+        } else {
+            likeButton.textContent = '❤️';
+            likes--;
+        }
+        
+        likesElement.textContent = `${likes} 赞`;
+
+        const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
+        updatePostData(postId, likes, viewTime);
+        postViewTimes[postId] = Date.now(); // 重置查看时间
+    }
+
+    function updateViewTimes() {
+        const posts = document.querySelectorAll('.post');
+        posts.forEach((post, index) => {
+            const rect = post.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom >= 0) {
+                // 帖子在视图中
+                if (!postViewTimes[index]) {
+                    postViewTimes[index] = Date.now();
+                }
+            } else {
+                // 帖子不在视图中
+                if (postViewTimes[index]) {
+                    const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+                    updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
+                    postViewTimes[index] = null;
+                }
+            }
+        });
+    }
+
+    async function updatePostData(postId, likes, viewTime) {
+        try {
+            await db.collection('users').doc(userData.docId).update({
+                posts: firebase.firestore.FieldValue.arrayUnion({
+                    id: postId,
+                    likes: likes,
+                    viewTime: viewTime
+                })
+            });
+        } catch (error) {
+            console.error("更新帖子数据时出错:", error);
+        }
+    }
+
+    // 当用户滚动到底部时调用此函数
+    async function finishSurvey() {
+        updateViewTimes(); // 确保所有查看时间都被更新
+        try {
+            await db.collection('users').doc(userData.docId).update({
+                surveyCompleted: true
+            });
+            alert('感谢您完成调查！');
+        } catch (error) {
+            console.error("标记调查完成时出错:", error);
+        }
+    }
+
+    // 添加滚动事件监听器来检测用户是否滚动到底部
+    window.addEventListener('scroll', () => {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+            finishSurvey();
+        }
+    });
+    </script>
+</body>
+</html>
