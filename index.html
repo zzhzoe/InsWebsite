@@ -140,112 +140,92 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let userData = {};
+      let userData = {};
+    let currentPost = 0;
     const totalPosts = 10;
-    let postViewTimes = {};
+    let startTime;
 
     document.getElementById('survey-form').addEventListener('submit', async function(e) {
         e.preventDefault();
+        console.log("Form submission triggered");
         
         userData = {
             name: document.getElementById('name').value,
-            studentId: document.getElementById('studentId').value,
-            gender: document.getElementById('gender').value,
             age: parseInt(document.getElementById('age').value),
+            gender: document.getElementById('gender').value,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             posts: []
         };
         
+        console.log("User data:", userData);
+
         try {
             const docRef = await db.collection('users').add(userData);
-            userData.docId = docRef.id;
-            alert('User information submitted successfully!');
-            document.getElementById('user-form').style.display = 'none';
-            document.getElementById('posts').style.display = 'block';
-            loadPosts();
-        } catch (error) {
-            console.error("Error submitting data:", error);
-            alert('Error submitting data. Please try again.');
-        }
-    });
-
-    function loadPosts() {
-        const postsContainer = document.getElementById('posts');
-        for (let i = 0; i < totalPosts; i++) {
-            const postElement = document.createElement('div');
-            postElement.className = 'post';
-            postElement.innerHTML = `
-                <h3>Post ${i + 1}</h3>
-                <img src="https://via.placeholder.com/400" alt="Post ${i + 1}">
-                <button class="like-btn" onclick="likePost(${i})">Like</button>
-            `;
-            postsContainer.appendChild(postElement);
-            postViewTimes[i] = Date.now();
-        }
-        
-        // Add scroll event listener to track viewing time
-        window.addEventListener('scroll', updateViewTimes);
+        console.log("Document written with ID: ", docRef.id);
+        userData.docId = docRef.id;
+        alert('User information submitted successfully!');
+        document.getElementById('user-form').style.display = 'none';
+        document.getElementById('posts').style.display = 'block';
+        console.log("Switched to posts view");
+        showNextPost();
+    } catch (error) {
+        console.error("Error submitting data:", error);
+        alert('Error submitting data. Please try again.');
     }
+});
 
-    function updateViewTimes() {
-        const posts = document.querySelectorAll('.post');
-        posts.forEach((post, index) => {
-            const rect = post.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom >= 0) {
-                // Post is in view
-                if (!postViewTimes[index]) {
-                    postViewTimes[index] = Date.now();
-                }
-            } else {
-                // Post is out of view
-                if (postViewTimes[index]) {
-                    const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                    updatePostData(index, false, viewTime);
-                    postViewTimes[index] = null;
-                }
-            }
-        });
+    function showNextPost() {
+    console.log("showNextPost called, current post:", currentPost);
+    if (currentPost < totalPosts) {
+        const postElement = document.createElement('div');
+        postElement.className = 'post';
+        postElement.innerHTML = `
+            <h3>Post ${currentPost + 1}</h3>
+            <img src="https://via.placeholder.com/400" alt="Post ${currentPost + 1}">
+            <button class="like-btn" onclick="likePost(${currentPost})">Like</button>
+        `;
+        document.getElementById('posts').innerHTML = '';
+        document.getElementById('posts').appendChild(postElement);
+        console.log("Post added to DOM");
+        startTime = Date.now();
+        currentPost++;
+    } else {
+        console.log("All posts have been displayed");
+        finishSurvey();
     }
+}
 
     async function likePost(postId) {
-        const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
-        updatePostData(postId, true, viewTime);
-        postViewTimes[postId] = Date.now(); // Reset view time after like
+    const viewTime = (Date.now() - startTime) / 1000;
+    console.log(`Liking post ${postId}, view time: ${viewTime} seconds`);
+    
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            posts: firebase.firestore.FieldValue.arrayUnion({
+                id: postId,
+                liked: true,
+                viewTime: viewTime
+            })
+        });
+        console.log("Post data updated successfully");
+    } catch (error) {
+        console.error("Error updating post data: ", error);
     }
+    showNextPost();
+}
 
-    async function updatePostData(postId, liked, viewTime) {
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                posts: firebase.firestore.FieldValue.arrayUnion({
-                    id: postId,
-                    liked: liked,
-                    viewTime: viewTime
-                })
-            });
-        } catch (error) {
-            console.error("Error updating post data: ", error);
-        }
-    }
-
-    // Call this function when the user reaches the end of the survey
     async function finishSurvey() {
-        updateViewTimes(); // Ensure all view times are updated
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                surveyCompleted: true
-            });
-            alert('Thank you for completing the survey!');
-        } catch (error) {
-            console.error("Error marking survey as completed: ", error);
-        }
+    document.getElementById('posts').innerHTML = '<h2>Thank you for completing the survey!</h2>';
+    console.log("Survey completed. Final user data:", userData);
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true
+        });
+        console.log("Survey marked as completed in Firestore");
+    } catch (error) {
+        console.error("Error marking survey as completed: ", error);
     }
-
-    // You might want to add an event listener to detect when the user has scrolled to the bottom
-    window.addEventListener('scroll', () => {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
-            finishSurvey();
-        }
-    });
+}
     </script>
 </body>
 </html>
