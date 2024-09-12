@@ -3,92 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Survey and Image Browsing</title>
+    <title>Social Media Feed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fafafa;
+            margin: 0;
+            padding: 0;
+        }
+        #app {
             max-width: 414px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #fafafa;
+            background-color: #fff;
         }
-        #user-form, #posts, #thank-you {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        h2 {
-            text-align: center;
-            color: #262626;
-        }
-        .instagram-icon {
-            display: block;
-            width: 50px;
-            height: 50px;
-            margin: 0 auto 20px;
-            background-color: #833AB4;
-            border-radius: 12px;
-            position: relative;
-        }
-        .instagram-icon::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 25px;
-            height: 25px;
-            border: 3px solid white;
-            border-radius: 8px;
-        }
-        .instagram-icon::after {
-            content: "";
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 8px;
-            height: 8px;
-            background-color: white;
-            border-radius: 50%;
-        }
-        form {
+        .header {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid #dbdbdb;
         }
-        label {
-            margin-top: 15px;
-            color: #262626;
-            font-weight: bold;
-        }
-        input, select {
-            margin-top: 5px;
-            padding: 10px;
-            border: 1px solid #dbdbdb;
-            border-radius: 3px;
-            background-color: #fafafa;
-        }
-        button {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #0095f6;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
+        .logo {
+            font-size: 24px;
             font-weight: bold;
         }
         .post {
-            background-color: white;
-            border: 1px solid #dbdbdb;
-            margin-bottom: 20px;
+            border-bottom: 1px solid #dbdbdb;
+            margin-bottom: 12px;
         }
         .post-header {
             display: flex;
             align-items: center;
-            padding: 10px;
+            padding: 14px 16px;
         }
         .post-header img {
             width: 32px;
@@ -97,12 +45,7 @@
             margin-right: 10px;
         }
         .post-username {
-            font-weight: bold;
-        }
-        .post-ai-label {
-            font-size: 0.8em;
-            color: #8e8e8e;
-            margin-top: 2px;
+            font-weight: 600;
         }
         .post-image {
             width: 100%;
@@ -110,82 +53,112 @@
         }
         .post-actions {
             display: flex;
-            padding: 10px;
+            padding: 6px 16px;
         }
         .post-actions button {
             background: none;
             border: none;
             font-size: 24px;
-            margin-right: 15px;
+            margin-right: 16px;
             cursor: pointer;
+            padding: 8px 0;
         }
         .post-likes {
-            font-weight: bold;
-            padding: 0 10px;
+            font-weight: 600;
+            padding: 0 16px;
         }
         .post-caption {
-            padding: 0 10px 10px;
+            padding: 0 16px 16px;
         }
-        #timer {
+        .footer {
             position: fixed;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(0, 0, 0, 0.7);
+            bottom: 0;
+            width: 100%;
+            max-width: 414px;
+            background-color: #fff;
+            border-top: 1px solid #dbdbdb;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .footer button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        #user-form {
+            padding: 20px;
+        }
+        #user-form input, #user-form select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #dbdbdb;
+            border-radius: 3px;
+        }
+        #user-form button {
+            width: 100%;
+            padding: 10px;
+            background-color: #0095f6;
             color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 14px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #thank-you {
+            text-align: center;
+            padding: 40px 20px;
         }
     </style>
 </head>
 <body>
     <div id="app">
         <div id="user-form">
-            <div class="instagram-icon"></div>
-            <h2>Please Fill in Your Information</h2>
+            <h2>Welcome to our Social Media Study</h2>
             <form id="survey-form">
-                <label for="name">Name</label>
-                <input type="text" id="name" required>
-                
-                <label for="studentId">Student ID</label>
-                <input type="text" id="studentId" required>
-                
-                <label for="gender">Gender</label>
+                <input type="text" id="name" placeholder="Name" required>
+                <input type="text" id="studentId" placeholder="Student ID" required>
                 <select id="gender" required>
-                    <option value="">Please select</option>
+                    <option value="">Select Gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                     <option value="other">Other</option>
                 </select>
-                
-                <label for="age">Age</label>
-                <input type="number" id="age" required>
-                
-                <button type="submit">Submit</button>
+                <input type="number" id="age" placeholder="Age" required>
+                <button type="submit">Start Browsing</button>
             </form>
         </div>
 
-        <div id="posts" style="display: none;">
-            <!-- Posts will be dynamically added here by JavaScript -->
+        <div id="feed" style="display: none;">
+            <div class="header">
+                <div class="logo">Social Feed</div>
+            </div>
+            <div id="posts">
+                <!-- Posts will be dynamically added here -->
+            </div>
+            <div class="footer">
+                <button>🏠</button>
+                <button>🔍</button>
+                <button>➕</button>
+                <button>❤️</button>
+                <button>👤</button>
+            </div>
         </div>
 
-        <div id="timer" style="display: none;">Time left: 5:00</div>
-
         <div id="thank-you" style="display: none;">
-            <h2>Thank You for Participating in the Survey!</h2>
-            <p>Your responses have been recorded. We appreciate your time and feedback.</p>
+            <h2>Thank You for Participating!</h2>
+            <p>Your feedback is valuable for our research.</p>
         </div>
     </div>
 
     <script>
-    let currentPage = localStorage.getItem('currentPage') || 'user-form';
     let userData = {};
     const totalPosts = 10;
     let postViewTimes = {};
-    let timer;
-    let timeLeft = 5 * 60; // 5 minutes in seconds
-        
-    // Firebase configuration
+    let startTime;
+    const timeLimit = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
     const firebaseConfig = {
         apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
         authDomain: "research-project-0801.firebaseapp.com",
@@ -196,21 +169,14 @@
         measurementId: "G-PX7PE1V6S3"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     function showPage(pageId) {
         document.getElementById('user-form').style.display = 'none';
-        document.getElementById('posts').style.display = 'none';
+        document.getElementById('feed').style.display = 'none';
         document.getElementById('thank-you').style.display = 'none';
-        document.getElementById('timer').style.display = 'none';
-
         document.getElementById(pageId).style.display = 'block';
-        if (pageId === 'posts') {
-            document.getElementById('timer').style.display = 'block';
-            startTimer();
-        }
     }
 
     document.getElementById('survey-form').addEventListener('submit', async function(e) {
@@ -228,19 +194,19 @@
         try {
             const docRef = await db.collection('users').add(userData);
             userData.docId = docRef.id;
-            localStorage.setItem('userData', JSON.stringify(userData));
-            localStorage.setItem('currentPage', 'posts');
-            showPage('posts');
+            showPage('feed');
             loadPosts();
+            startTime = Date.now();
+            setTimeout(submitSurvey, timeLimit);
         } catch (error) {
             console.error("Error submitting data:", error);
-            alert('Error submitting data. Please try again.');
+            alert('Error starting the survey. Please try again.');
         }
     });
        
     function loadPosts() {
         const postsContainer = document.getElementById('posts');
-        postsContainer.innerHTML = ''; // Clear existing posts
+        postsContainer.innerHTML = '';
 
         const posts = generateRandomPosts(totalPosts);
         posts.forEach((post, index) => {
@@ -258,10 +224,10 @@
             posts.push({
                 id: i + 1,
                 username: `user${i + 1}`,
-                profilePic: `https://via.placeholder.com/32/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=User${i + 1}`,
-                postImage: `https://via.placeholder.com/414x414/${Math.floor(Math.random()*16777215).toString(16)}/ffffff?text=Post${i + 1}`,
-                caption: `This is the caption for post ${i + 1}.`,
-                likes: 0,
+                profilePic: `https://picsum.photos/32/32?random=${i}`,
+                postImage: `https://picsum.photos/414/414?random=${i}`,
+                caption: `Enjoying life! #moment${i + 1}`,
+                likes: Math.floor(Math.random() * 1000),
                 isAI: Math.random() < 0.5
             });
         }
@@ -282,10 +248,7 @@
         postElement.innerHTML = `
             <div class="post-header">
                 <img src="${post.profilePic}" alt="${post.username}">
-                <div>
-                    <div class="post-username">${post.username}</div>
-                    ${post.isAI ? '<div class="post-ai-label">This is AI-generated content</div>' : ''}
-                </div>
+                <div class="post-username">${post.username}</div>
             </div>
             <img class="post-image" src="${post.postImage}" alt="Post image">
             <div class="post-actions">
@@ -305,10 +268,12 @@
         let likes = parseInt(likesElement.textContent);
         
         if (likeButton.textContent === '❤️') {
-            likeButton.textContent = '💗';
+            likeButton.textContent = '❤️';
+            likeButton.style.color = 'red';
             likes++;
         } else {
             likeButton.textContent = '❤️';
+            likeButton.style.color = 'black';
             likes--;
         }
         
@@ -316,7 +281,7 @@
 
         const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
         updatePostData(postId, likes, viewTime);
-        postViewTimes[postId] = Date.now(); // Reset view time
+        postViewTimes[postId] = Date.now();
     }
 
     function handleScroll() {
@@ -357,24 +322,9 @@
             console.error("Error updating post data:", error);
         }
     }
-    
-    function startTimer() {
-        const timerElement = document.getElementById('timer');
-        timer = setInterval(() => {
-            timeLeft--;
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            timerElement.textContent = `Time left: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-            if (timeLeft <= 0) {
-                clearInterval(timer);
-                submitSurvey();
-            }
-        }, 1000);
-    }
 
     async function submitSurvey() {
-        updateViewTimes(); // Ensure all view times are updated
+        updateViewTimes();
         
         Object.keys(postViewTimes).forEach(index => {
             if (postViewTimes[index]) {
@@ -387,30 +337,18 @@
 
         try {
             await db.collection('users').doc(userData.docId).update({
-                surveyCompleted: true
+                surveyCompleted: true,
+                totalTime: (Date.now() - startTime) / 1000
             });
-            localStorage.removeItem('userData');
-            localStorage.removeItem('currentPage');
             showPage('thank-you');
         } catch (error) {
             console.error("Error submitting survey:", error);
-            alert('Error submitting survey. Please try again.');
+            alert('Error submitting survey. Your data may not have been saved.');
         }
     }
 
     window.addEventListener('load', function() {
-        const savedUserData = localStorage.getItem('userData');
-        
-        if (currentPage === 'posts' && savedUserData) {
-            userData = JSON.parse(savedUserData);
-            showPage('posts');
-            loadPosts();
-        } else {
-            // Reset state for other pages
-            localStorage.removeItem('userData');
-            localStorage.removeItem('currentPage');
-            showPage('user-form');
-        }
+        showPage('user-form');
     });
     </script>
 </body>
