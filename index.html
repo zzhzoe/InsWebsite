@@ -195,41 +195,42 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
 const fixedPosts = [
     {
         username: "cats_golden",
-        profilePic: "cats_golden_profile.jpg",
-        postImage: "cats_golden_post.jpg",
+        profilePic: baseUrl + "post/2.jpg",
+        postImage: baseUrl + "2.jpg",
         caption: "Loving nature."
     },
     {
         username: "greenly",
-        profilePic: "greenly_profile.jpg",
-        postImage: "greenly_post.jpg",
+        profilePic: baseUrl + "post/3.png",
+        postImage: baseUrl + "3.png",
         caption: "Meet our new seasonal salad. It's a summer delight that you don't want to miss!"
     },
     {
         username: "borcelle_ig",
-        profilePic: "borcelle_ig_profile.jpg",
-        postImage: "borcelle_ig_post.jpg",
+        profilePic: baseUrl + "post/4.png",
+        postImage: baseUrl + "4.png",
         caption: "Oak Bedside Table. #simple #elegant"
     },
     {
         username: "saadl.bike",
-        profilePic: "saadl_bike_profile.jpg",
-        postImage: "saadl_bike_post.jpg",
+        profilePic: baseUrl + "post/5.jpg",
+        postImage: baseUrl + "5.jpg",
         caption: '"It\'s not the bike, it\'s the rider" #cycling #cyclinglife #cyclingshots'
     },
     {
         username: "beautee.weekly",
-        profilePic: "beautee_weekly_profile.jpg",
-        postImage: "beautee_weekly_post.jpg",
+        profilePic: baseUrl + "post/6.jpg",
+        postImage: baseUrl + "6.jpg",
         caption: "Purple is the theme of the week. #beautyfavorites #makeup #purplelove"
     },
     {
         username: "getawaydotcom",
-        profilePic: "getawaydotcom_profile.jpg",
-        postImage: "getawaydotcom_post.jpg",
+        profilePic: baseUrl + "post/7.jpg",
+        postImage: baseUrl + "7.jpg",
         caption: "Book your summer getaway today and get 25% off. #summersale"
     }
 ];
@@ -237,20 +238,19 @@ const fixedPosts = [
 const variablePosts = [
     {
         username: "juliastarlily",
-        profilePic: "juliastarlily_profile.jpg",
-        postImage: "juliastarlily_post.jpg",
+        profilePic: baseUrl + "post/1-fat.JPG",
+        postImage: baseUrl + "1-fat.JPG",
         caption: "So excited to be the first influencer for #Alignyoga. Absolutely adore this outfit.",
         isAI: false
     },
     {
         username: "juliastarlily",
-        profilePic: "juliastarlily_profile.jpg",
-        postImage: "juliastarlily_post.jpg",
+        profilePic: baseUrl + "post/1-thin.JPG",
+        postImage: baseUrl + "1-thin.JPG",
         caption: "So excited to be the first AI influencer for #Alignyoga. Absolutely adore this outfit.",
         isAI: true
     }
 ];
-
 function showPage(pageId) {
     document.getElementById('user-form').style.display = 'none';
     document.getElementById('posts').style.display = 'none';
