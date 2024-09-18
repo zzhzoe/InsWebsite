@@ -8,181 +8,260 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
        <style>
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        background-color: #fafafa;
-        margin: 0;
-        padding: 0;
-    }
+      body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fafafa;
+            margin: 0;
+            padding: 0;
+        }
+        #app {
+            max-width: 768px; /* iPad width */
+            margin: 0 auto;
+            background-color: #fff;
+        }
+        #user-form, #posts, #thank-you {
+            padding: 20px;
+        }
+        h2 {
+            text-align: center;
+            color: #262626;
+        }
+        .instagram-logo {
+            display: block;
+            width: 175px;
+            margin: 22px auto;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 350px;
+            margin: 0 auto;
+        }
+        input, select {
+            margin-bottom: 10px;
+            padding: 9px 0 7px 8px;
+            background: #fafafa;
+            border: 1px solid #dbdbdb;
+            border-radius: 3px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 5px 9px;
+            background-color: #0095f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .post {
+            border-bottom: 1px solid #efefef;
+            margin-bottom: 12px;
+            max-width: 614px;
+            margin-left: auto;
+            margin-right: auto;
+            
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+        }
+        .post-header img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .post-username {
+            font-weight: 600;
+            color: #262626;
+        }
+        .post-ai-label {
+            font-size: 0.8em;
+            color: #8e8e8e;
+            margin-top: 2px;
+        }
+        .post-options {
+            margin-left: auto;
+            font-weight: bold;
+            font-size: 16px;
+            color: #262626;
+        }
+        .post-image-container {
+    position: relative;
+    width: 100%;
+    padding-top: 100%;
+    overflow: hidden;
+}
+        .post-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; 
+}
+        .post-actions {
+            display: flex;
+            padding: 6px 16px;
+        }
+        .post-actions button {
+            background: none;
+            border: none;
+            padding: 8px 0;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+        .post-actions img {
+            width: 24px;
+            height: 24px;
+        }
+        .post-likes {
+            font-weight: 600;
+            margin: 0 16px 8px;
+            color: #262626;
+        }
+        .post-caption {
+            margin: 0 16px 8px;
+            color: #262626;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 768px;
+            background-color: #fff;
+            border-top: 1px solid #dbdbdb;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .footer button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 0;
+        }
+        .footer img {
+            width: 24px;
+            height: 24px;
+        }
+        #posts {
+    padding: 20px;
+    padding-bottom: 70px; 
+}
 
-    #app {
-        max-width: 768px; /* iPad宽度 */
-        margin: 0 auto;
-        background-color: #fff;
-    }
+.footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    max-width: 768px;
+    background-color: #fff;
+    border-top: 1px solid #dbdbdb;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+}
 
-    .post {
-        height: 100vh; /* 全屏高度 */
-        display: flex;
-        flex-direction: column;
-        padding: 20px;
-        box-sizing: border-box;
-        border-bottom: 1px solid #efefef;
-    }
+      
 
-    .post-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-    }
+.like-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
 
-    .post-header img {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        margin-right: 10px;
-    }
+.like-overlay img {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+    transform: scale(0) translateY(0);
+    animation: likeAnimation 1.5s forwards;
+}
 
-    .post-username {
-        font-weight: 600;
-        color: #262626;
-        display: flex;
-        align-items: center;
-    }
-
-    .post-ai-label {
-        display: inline-flex;
-        align-items: center;
-        font-size: 0.7em;
-        color: #8e8e8e;
-        background-color: #f8f8f8;
-        border-radius: 3px;
-        padding: 2px 4px;
-        margin-left: 8px;
-    }
-
-    .warning-icon {
-        width: 10px;
-        height: 10px;
-        margin-right: 3px;
-    }
-
-    .post-options {
-        margin-left: auto;
-        font-weight: bold;
-        font-size: 16px;
-        color: #262626;
-    }
-
-    .post-image-container {
-        flex-grow: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        margin-bottom: 10px;
-    }
-
-    .post-image {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-    }
-
-    .post-actions {
-        display: flex;
-        margin-bottom: 10px;
-    }
-
-    .post-actions button {
-        background: none;
-        border: none;
-        padding: 8px 0;
-        margin-right: 16px;
-        cursor: pointer;
-    }
-
-    .post-actions img {
-        width: 24px;
-        height: 24px;
-    }
-
-    .post-likes {
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: #262626;
-    }
-
-    .post-caption {
-        color: #262626;
-    }
-
-    .footer {
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        max-width: 768px;
-        background-color: #fff;
-        border-top: 1px solid #dbdbdb;
-        display: flex;
-        justify-content: space-around;
-        padding: 10px 0;
-        z-index: 1000;
-    }
-
-    .footer button {
-        background: none;
-        border: none;
-        cursor: pointer;
-    }
-
-    .footer img {
-        width: 24px;
-        height: 24px;
-    }
-
-    .like-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: none;
-        justify-content: center;
-        align-items: center;
-        pointer-events: none;
-    }
-
-    .like-overlay img {
-        width: 80px;
-        height: 80px;
+@keyframes likeAnimation {
+    0% {
         opacity: 0;
         transform: scale(0) translateY(0);
-        animation: likeAnimation 1.5s forwards;
     }
+    15% {
+        opacity: 1;
+        transform: scale(1.2) translateY(0);
+    }
+    30% {
+        transform: scale(0.95) translateY(0);
+    }
+    45%, 80% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.3) translateY(-100px);
+    }
+}
 
-    @keyframes likeAnimation {
-        0% {
-            opacity: 0;
-            transform: scale(0) translateY(0);
-        }
-        15% {
-            opacity: 1;
-            transform: scale(1.2) translateY(0);
-        }
-        30% {
-            transform: scale(0.95) translateY(0);
-        }
-        45%, 80% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-        }
-        100% {
-            opacity: 0;
-            transform: scale(0.3) translateY(-100px);
-        }
+  .post-ai-label {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75em;
+    color: #8e8e8e;
+    margin-top: 2px;
+    background-color: #f8f8f8;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+.warning-icon {
+    width: 12px;
+    height: 12px;
+    margin-right: 4px;
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+}
+
+.post-header > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.post-username {
+    margin-bottom: 2px;
+}
+        @media (max-width: 414px) {
+    /* 手机屏幕 */
+    .post-image-container {
+        padding-top: 100%; /* 保持1:1比例 */
     }
-</style>
+}
+
+@media (min-width: 415px) and (max-width: 768px) {
+    /* 平板屏幕 */
+    .post-image-container {
+        padding-top: 75%; /* 4:3比例，适合平板 */
+    }
+}
+
+@media (min-width: 769px) {
+    /* 大屏幕 */
+    .post-image-container {
+        padding-top: 66.67%; /* 3:2比例，适合大屏幕 */
+    }
+}
+    </style>
+
 </head>
 <body>
     <div id="app">
@@ -416,7 +495,7 @@ function createPostElement(post, index) {
     <div class="post-options">•••</div>
 </div>
         <div class="post-image-container">
-            <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
+    <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
             <div class="like-overlay">
                 <img src="https://img.icons8.com/ios-filled/50/ff0000/hearts.png" alt="Like">
             </div>
