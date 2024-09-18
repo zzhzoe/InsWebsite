@@ -414,6 +414,7 @@ function shuffleArray(array) {
 function createPostElement(post, index) {
     const postElement = document.createElement('div');
     postElement.className = 'post';
+     const formattedCaption = post.caption.replace(/#(\w+)/g, '<span style="color: blue;">#$1</span>');
     postElement.innerHTML = `
         <div class="post-header">
             <img src="${post.profilePic}" alt="${post.username}">
@@ -434,7 +435,7 @@ function createPostElement(post, index) {
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
         <div class="post-likes">0 likes</div>
-        <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
+        <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
     `;
 
     const postImageContainer = postElement.querySelector('.post-image-container');
@@ -482,11 +483,8 @@ function showLikeOverlay(container) {
 }
 
 function loadPosts() {
-     const formattedCaption = post.caption.replace(/#(\w+)/g, '<span style="color: blue;">#$1</span>');
-    postElement.innerHTML = `
-       
-        <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
-    `;
+    const postsContainer = document.getElementById('posts');
+    postsContainer.innerHTML = '';
 
     userPosts.forEach((post, index) => {
         const postElement = createPostElement(post, index);
