@@ -153,14 +153,74 @@
     padding: 10px 0;
     z-index: 1000;
 }
+
+        .post-image-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.like-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+.like-overlay img {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+    transform: scale(0) translateY(0);
+    animation: likeAnimation 1.5s forwards;
+}
+
+@keyframes likeAnimation {
+    0% {
+        opacity: 0;
+        transform: scale(0) translateY(0);
+    }
+    15% {
+        opacity: 1;
+        transform: scale(1.2) translateY(0);
+    }
+    30% {
+        transform: scale(0.95) translateY(0);
+    }
+    45%, 80% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.3) translateY(-100px);
+    }
+}
+
+        .post-ai-label {
+    display: flex;
+    align-items: center;
+    font-size: 0.8em;
+    color: #8e8e8e;
+    margin-top: 2px;
+}
+
+.warning-icon {
+    font-size: 1.2em;
+    margin-right: 4px;
+}
     </style>
 </head>
 <body>
     <div id="app">
         <div id="user-form">
-           <img src="https://www.instagram.com/static/images/web/mobile_nav_type_logo-2x.png/1b47f9d0e595.png" alt="Instagram" class="instagram-logo">
+           <img src="https://zzhzoe.github.io/InsWebsite/post_images/IMG_0619.PNG" alt="Instagram" class="instagram-logo">
             <form id="survey-form">
-                <input type="text" id="name" placeholder="Full Name" required>
+                <input type="text" id="name" placeholder="NickName" required>
                 <input type="text" id="studentId" placeholder="Student ID" required>
                 <select id="gender" required>
                     <option value="">Select Gender</option>
@@ -329,20 +389,69 @@ function createPostElement(post, index) {
             <img src="${post.profilePic}" alt="${post.username}">
             <div>
                 <div class="post-username">${post.username}</div>
-                ${post.isAI ? '<div class="post-ai-label">Contains AI info</div>' : ''}
+${post.isAI ? '<div class="post-ai-label"><span class="warning-icon">⚠️</span> Contains AI info</div>' : ''}
             </div>
             <div class="post-options">•••</div>
         </div>
-        <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
+        <div class="post-image-container">
+            <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
+            <div class="like-overlay">
+                <img src="https://img.icons8.com/ios-filled/50/ff0000/hearts.png" alt="Like">
+            </div>
+        </div>
         <div class="post-actions">
-            <button onclick="likePost(${index})"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like"></button>
+            <button onclick="likePost(${index})"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like" class="like-button"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
         <div class="post-likes">0 likes</div>
         <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
     `;
+
+    const postImageContainer = postElement.querySelector('.post-image-container');
+    let lastTap = 0;
+
+    postImageContainer.addEventListener('click', function(e) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+            likePost(index);
+            showLikeOverlay(this);
+            e.preventDefault();
+        }
+        lastTap = currentTime;
+    });
+
     return postElement;
+}
+
+function likePost(postId) {
+    const post = document.querySelectorAll('.post')[postId];
+    const likeButton = post.querySelector('.like-button');
+    const likesElement = post.querySelector('.post-likes');
+    let likes = parseInt(likesElement.textContent);
+    
+    if (likeButton.src.includes('ios/50')) {
+        likeButton.src = 'https://img.icons8.com/ios-filled/50/ff0000/hearts.png';
+        likes++;
+    } else {
+        likeButton.src = 'https://img.icons8.com/ios/50/000000/hearts--v1.png';
+        likes--;
+    }
+    
+    likesElement.textContent = `${likes} likes`;
+
+    const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
+    updatePostData(postId, likes, viewTime);
+    postViewTimes[postId] = Date.now();
+}
+
+function showLikeOverlay(container) {
+    const overlay = container.querySelector('.like-overlay');
+    overlay.style.display = 'flex';
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 1500);
 }
 
 function loadPosts() {
@@ -359,65 +468,109 @@ function loadPosts() {
     window.addEventListener('scroll', handleScroll);
 }
 
-async function likePost(postId) {
-    const likeButton = document.querySelector(`.post:nth-child(${postId + 1}) .post-actions button:first-child img`);
-    const likesElement = document.querySelector(`.post:nth-child(${postId + 1}) .post-likes`);
-    let likes = parseInt(likesElement.textContent);
-    
-    if (likeButton.src.includes('ios')) {
-        likeButton.src = 'https://img.icons8.com/ios-filled/50/000000/hearts--v1.png';
-        likes++;
-    } else {
-        likeButton.src = 'https://img.icons8.com/ios/50/000000/hearts--v1.png';
-        likes--;
-    }
-    
-    likesElement.textContent = `${likes} likes`;
-
-    const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
-    updatePostData(postId, likes, viewTime);
-    postViewTimes[postId] = Date.now();
-}
-
 function handleScroll() {
     updateViewTimes();
 }
 
+const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒，可以根据需要调整
+
+let postViewStates = {};
+
 function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
+    const currentTime = Date.now();
 
     posts.forEach((post, index) => {
         const rect = post.getBoundingClientRect();
         const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
         const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
 
-        if (visibleArea > 0) {
-            if (!postViewTimes[index]) {
-                    postViewTimes[index] = Date.now();
+        if (visibleArea > 20) { // 只有当帖子至少有20%可见时才考虑
+            if (!postViewStates[index]) {
+                postViewStates[index] = {
+                    startTime: currentTime,
+                    actualStartTime: null,
+                    lastUpdateTime: currentTime
+                };
+            } else {
+                const state = postViewStates[index];
+                if (!state.actualStartTime && currentTime - state.startTime >= THRESHOLD_TIME) {
+                    state.actualStartTime = currentTime;
                 }
-            } else if (postViewTimes[index]) {
-                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
-                postViewTimes[index] = null;
+                if (state.actualStartTime) {
+                    const viewTime = (currentTime - state.lastUpdateTime) / 1000;
+                    updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), viewTime);
+                    state.lastUpdateTime = currentTime;
+                }
             }
-        });
+        } else if (postViewStates[index]) {
+            const state = postViewStates[index];
+            if (state.actualStartTime) {
+                const finalViewTime = (currentTime - state.lastUpdateTime) / 1000;
+                updatePostData(index, parseInt(post.querySelector('.post-likes').textContent), finalViewTime);
+            }
+            delete postViewStates[index];
+        }
+    });
+}
+
+
+   let postDataCache = {};
+
+function updatePostData(postId, likes, viewTime) {
+    if (!postDataCache[postId]) {
+        postDataCache[postId] = {
+            id: postId,
+            totalViewTime: 0,
+            viewCount: 0,
+            likes: likes,
+            lastUpdateTime: Date.now()
+        };
     }
 
-    async function updatePostData(postId, likes, viewTime) {
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                posts: firebase.firestore.FieldValue.arrayUnion({
-                    id: postId,
-                    likes: likes,
-                    viewTime: viewTime
-                })
-            });
-        } catch (error) {
-            console.error("Error updating post data:", error);
-        }
-    }
+    const postData = postDataCache[postId];
     
+    // 更新查看时间
+    postData.totalViewTime += viewTime;
+    postData.viewCount++;
+    
+    // 更新点赞数
+    postData.likes = likes;
+
+    // 如果距离上次更新超过10秒，或者累积的查看时间超过30秒，则发送更新
+    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
+        sendPostDataUpdate(postId);
+    }
+}
+
+function sendPostDataUpdate(postId) {
+    const postData = postDataCache[postId];
+    if (!postData) return;
+
+    // 发送数据到服务器
+    db.collection('users').doc(userData.docId).update({
+        posts: firebase.firestore.FieldValue.arrayUnion({
+            id: postData.id,
+            likes: postData.likes,
+            totalViewTime: Math.round(postData.totalViewTime * 100) / 100, // 保留两位小数
+            viewCount: postData.viewCount,
+            averageViewTime: Math.round((postData.totalViewTime / postData.viewCount) * 100) / 100 // 保留两位小数
+        })
+    }).then(() => {
+        // 重置缓存数据
+        postData.totalViewTime = 0;
+        postData.viewCount = 0;
+        postData.lastUpdateTime = Date.now();
+    }).catch(error => {
+        console.error("Error updating post data:", error);
+    });
+}
+
+// 在用户离开页面时，确保所有数据都被发送
+window.addEventListener('beforeunload', () => {
+    Object.keys(postDataCache).forEach(sendPostDataUpdate);
+});
     async function submitSurvey() {
         updateViewTimes();
         
