@@ -201,7 +201,7 @@
     }
 }
 
-        .post-ai-label {
+   .post-ai-label {
     display: flex;
     align-items: center;
     font-size: 0.8em;
@@ -210,7 +210,8 @@
 }
 
 .warning-icon {
-    font-size: 1.2em;
+    width: 16px; /* Adjust as needed to match text size */
+    height: 16px; /* Adjust as needed to match text size */
     margin-right: 4px;
 }
     </style>
@@ -417,8 +418,7 @@ function createPostElement(post, index) {
         <div class="post-header">
             <img src="${post.profilePic}" alt="${post.username}">
             <div>
-                <div class="post-username">${post.username}</div>
-                ${post.isAI ? '<div class="post-ai-label"><span class="warning-icon">⚠️</span> Contains AI info</div>' : ''}
+                <div class="post-ai-label"><img src="https://zzhzoe.github.io/InsWebsite/post_images/ShareImage.jpg" alt="AI Warning" class="warning-icon"> Contains AI info</div>
             </div>
             <div class="post-options">•••</div>
         </div>
@@ -482,8 +482,11 @@ function showLikeOverlay(container) {
 }
 
 function loadPosts() {
-    const postsContainer = document.getElementById('posts');
-    postsContainer.innerHTML = '';
+     const formattedCaption = post.caption.replace(/#(\w+)/g, '<span style="color: blue;">#$1</span>');
+    postElement.innerHTML = `
+       
+        <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
+    `;
 
     userPosts.forEach((post, index) => {
         const postElement = createPostElement(post, index);
