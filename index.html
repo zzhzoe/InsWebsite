@@ -168,36 +168,36 @@
     display: none;
     justify-content: center;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.5);
+    pointer-events: none;
 }
 
 .like-overlay img {
     width: 80px;
     height: 80px;
     opacity: 0;
-    transform: scale(0);
-    animation: likeAnimation 1s forwards;
+    transform: scale(0) translateY(0);
+    animation: likeAnimation 1.5s forwards;
 }
 
 @keyframes likeAnimation {
     0% {
         opacity: 0;
-        transform: scale(0);
+        transform: scale(0) translateY(0);
     }
     15% {
-        opacity: 0.9;
-        transform: scale(1.2);
+        opacity: 1;
+        transform: scale(1.2) translateY(0);
     }
     30% {
-        transform: scale(0.95);
+        transform: scale(0.95) translateY(0);
     }
     45%, 80% {
-        opacity: 0.9;
-        transform: scale(1);
+        opacity: 1;
+        transform: scale(1) translateY(0);
     }
     100% {
         opacity: 0;
-        transform: scale(0.3);
+        transform: scale(0.3) translateY(-100px);
     }
 }
     </style>
@@ -383,7 +383,7 @@ function createPostElement(post, index) {
         <div class="post-image-container">
             <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
             <div class="like-overlay">
-                <img src="https://img.icons8.com/ios-filled/50/ffffff/hearts.png" alt="Like">
+                <img src="https://img.icons8.com/ios-filled/50/ff0000/hearts.png" alt="Like">
             </div>
         </div>
         <div class="post-actions">
@@ -396,7 +396,6 @@ function createPostElement(post, index) {
     `;
 
     const postImageContainer = postElement.querySelector('.post-image-container');
-    let tapCount = 0;
     let lastTap = 0;
 
     postImageContainer.addEventListener('click', function(e) {
@@ -420,7 +419,7 @@ function likePost(postId) {
     let likes = parseInt(likesElement.textContent);
     
     if (likeButton.src.includes('ios/50')) {
-        likeButton.src = 'https://img.icons8.com/ios-filled/50/000000/hearts.png';
+        likeButton.src = 'https://img.icons8.com/ios-filled/50/ff0000/hearts.png';
         likes++;
     } else {
         likeButton.src = 'https://img.icons8.com/ios/50/000000/hearts--v1.png';
@@ -439,7 +438,7 @@ function showLikeOverlay(container) {
     overlay.style.display = 'flex';
     setTimeout(() => {
         overlay.style.display = 'none';
-    }, 1000);
+    }, 1500);
 }
 
 function loadPosts() {
