@@ -14,7 +14,7 @@
             padding: 0;
         }
         #app {
-            max-width: 414px;
+            max-width: 768px; /* iPad width */
             margin: 0 auto;
             background-color: #fff;
         }
@@ -33,6 +33,8 @@
         form {
             display: flex;
             flex-direction: column;
+            max-width: 350px;
+            margin: 0 auto;
         }
         input, select {
             margin-bottom: 10px;
@@ -54,6 +56,10 @@
         .post {
             border-bottom: 1px solid #efefef;
             margin-bottom: 12px;
+            max-width: 614px;
+            margin-left: auto;
+            margin-right: auto;
+            
         }
         .post-header {
             display: flex;
@@ -69,6 +75,11 @@
         .post-username {
             font-weight: 600;
             color: #262626;
+        }
+        .post-ai-label {
+            font-size: 0.8em;
+            color: #8e8e8e;
+            margin-top: 2px;
         }
         .post-options {
             margin-left: auto;
@@ -87,9 +98,13 @@
         .post-actions button {
             background: none;
             border: none;
-            font-size: 24px;
-            margin-right: 16px;
             padding: 8px 0;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+        .post-actions img {
+            width: 24px;
+            height: 24px;
         }
         .post-likes {
             font-weight: 600;
@@ -104,7 +119,7 @@
             position: fixed;
             bottom: 0;
             width: 100%;
-            max-width: 414px;
+            max-width: 768px;
             background-color: #fff;
             border-top: 1px solid #dbdbdb;
             display: flex;
@@ -114,16 +129,36 @@
         .footer button {
             background: none;
             border: none;
-            font-size: 24px;
             cursor: pointer;
             margin: 0;
         }
+        .footer img {
+            width: 24px;
+            height: 24px;
+        }
+        #posts {
+    padding: 20px;
+    padding-bottom: 70px; 
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    max-width: 768px;
+    background-color: #fff;
+    border-top: 1px solid #dbdbdb;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+}
     </style>
 </head>
 <body>
     <div id="app">
         <div id="user-form">
-            <img src="https://www.instagram.com/static/images/web/mobile_nav_type_logo.png/735145cfe0a4.png" alt="Instagram" class="instagram-logo">
+           <img src="https://www.instagram.com/static/images/web/mobile_nav_type_logo-2x.png/1b47f9d0e595.png" alt="Instagram" class="instagram-logo">
             <form id="survey-form">
                 <input type="text" id="name" placeholder="Full Name" required>
                 <input type="text" id="studentId" placeholder="Student ID" required>
@@ -148,168 +183,217 @@
         </div>
 
         <div class="footer" style="display: none;">
-            <button>🏠</button>
-            <button>🔍</button>
-            <button>➕</button>
-            <button>❤️</button>
-            <button>👤</button>
+            <button><img src="https://img.icons8.com/ios/50/000000/home--v1.png" alt="Home"></button>
+            <button><img src="https://img.icons8.com/ios/50/000000/search--v1.png" alt="Search"></button>
+            <button><img src="https://img.icons8.com/ios/50/000000/plus-math--v1.png" alt="Add"></button>
+            <button><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Likes"></button>
+            <button><img src="https://img.icons8.com/ios/50/000000/user-male-circle--v1.png" alt="Profile"></button>
         </div>
     </div>
 
     <script>
-    let currentPage = localStorage.getItem('currentPage') || 'user-form';
-    let userData = {};
-    const totalPosts = 10;
-    let postViewTimes = {};
-    let startTime;
-    const timeLimit = 5 * 60 * 1000; // 5 minutes in milliseconds
-        
-    // Firebase configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
-        authDomain: "research-project-0801.firebaseapp.com",
-        projectId: "research-project-0801",
-        storageBucket: "research-project-0801.appspot.com",
-        messagingSenderId: "655922410105",
-        appId: "1:655922410105:web:b0919370054af912261aa8",
-        measurementId: "G-PX7PE1V6S3"
+let currentPage = 'user-form';
+let userData = {};
+let postViewTimes = {};
+let startTime;
+const timeLimit = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
+    authDomain: "research-project-0801.firebaseapp.com",
+    projectId: "research-project-0801",
+    storageBucket: "research-project-0801.appspot.com",
+    messagingSenderId: "655922410105",
+    appId: "1:655922410105:web:b0919370054af912261aa8",
+    measurementId: "G-PX7PE1V6S3"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
+const fixedPosts = [
+    {
+        username: "cats_golden",
+        profilePic: baseUrl + "post/2.jpg",
+        postImage: baseUrl + "2.jpg",
+        caption: "Loving nature."
+    },
+    {
+        username: "greenly",
+        profilePic: baseUrl + "post/3.jpg",
+        postImage: baseUrl + "3.png",
+        caption: "Meet our new seasonal salad. It's a summer delight that you don't want to miss!"
+    },
+    {
+        username: "borcelle_ig",
+        profilePic: baseUrl + "post/4.png",
+        postImage: baseUrl + "4.png",
+        caption: "Oak Bedside Table. #simple #elegant"
+    },
+    {
+        username: "saadl.bike",
+        profilePic: baseUrl + "post/5.png",
+        postImage: baseUrl + "5.jpg",
+        caption: '"It\'s not the bike, it\'s the rider" #cycling #cyclinglife #cyclingshots'
+    },
+    {
+        username: "beautee.weekly",
+        profilePic: baseUrl + "post/6.png",
+        postImage: baseUrl + "6.jpg",
+        caption: "Purple is the theme of the week. #beautyfavorites #makeup #purplelove"
+    },
+    {
+        username: "getawaydotcom",
+        profilePic: baseUrl + "post/7.png",
+        postImage: baseUrl + "7.jpg",
+        caption: "Book your summer getaway today and get 25% off. #summersale"
+    }
+];
+
+const variablePosts = [
+    {
+        username: "juliastarlily",
+        profilePic: baseUrl + "post/1-fat.JPG",
+        postImage: baseUrl + "1-fat.JPG",
+        caption: "So excited to be the first influencer for #Alignyoga. Absolutely adore this outfit.",
+        isAI: false
+    },
+    {
+        username: "juliastarlily",
+        profilePic: baseUrl + "post/1-thin.png",
+        postImage: baseUrl + "1-thin.JPG",
+        caption: "So excited to be the first AI influencer for #Alignyoga. Absolutely adore this outfit.",
+        isAI: true
+    }
+];
+function showPage(pageId) {
+    document.getElementById('user-form').style.display = 'none';
+    document.getElementById('posts').style.display = 'none';
+    document.getElementById('thank-you').style.display = 'none';
+    document.querySelector('.footer').style.display = 'none';
+
+    document.getElementById(pageId).style.display = 'block';
+    if (pageId === 'posts') {
+        document.querySelector('.footer').style.display = 'flex';
+    }
+}
+
+document.getElementById('survey-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    userData = {
+        name: document.getElementById('name').value,
+        studentId: document.getElementById('studentId').value,
+        gender: document.getElementById('gender').value,
+        age: parseInt(document.getElementById('age').value),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        posts: []
     };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    function showPage(pageId) {
-        document.getElementById('user-form').style.display = 'none';
-        document.getElementById('posts').style.display = 'none';
-        document.getElementById('thank-you').style.display = 'none';
-        document.querySelector('.footer').style.display = 'none';
-
-        document.getElementById(pageId).style.display = 'block';
-        if (pageId === 'posts') {
-            document.querySelector('.footer').style.display = 'flex';
-        }
+    
+    try {
+        const docRef = await db.collection('users').add(userData);
+        userData.docId = docRef.id;
+        showPage('posts');
+        loadPosts();
+        startTime = Date.now();
+        setTimeout(submitSurvey, timeLimit);
+    } catch (error) {
+        console.error("Error submitting data:", error);
+        alert('Error logging in. Please try again.');
     }
+});
 
-    document.getElementById('survey-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        userData = {
-            name: document.getElementById('name').value,
-            studentId: document.getElementById('studentId').value,
-            gender: document.getElementById('gender').value,
-            age: parseInt(document.getElementById('age').value),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            posts: []
-        };
-        
-        try {
-            const docRef = await db.collection('users').add(userData);
-            userData.docId = docRef.id;
-            showPage('posts');
-            loadPosts();
-            startTime = Date.now();
-            setTimeout(submitSurvey, timeLimit);
-        } catch (error) {
-            console.error("Error submitting data:", error);
-            alert('Error logging in. Please try again.');
-        }
-    });
-       
-    function loadPosts() {
-        const postsContainer = document.getElementById('posts');
-        postsContainer.innerHTML = '';
+function generatePosts() {
+    const posts = [...fixedPosts];
+    const randomVariablePost = variablePosts[Math.floor(Math.random() * variablePosts.length)];
+    posts.unshift(randomVariablePost);
+    return shuffleArray(posts);
+}
 
-        const posts = generateRandomPosts(totalPosts);
-        posts.forEach((post, index) => {
-            const postElement = createPostElement(post, index);
-            postsContainer.appendChild(postElement);
-            postViewTimes[index] = Date.now();
-        });
-
-        window.addEventListener('scroll', handleScroll);
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
     }
+    return array;
+}
 
-    function generateRandomPosts(count) {
-        const posts = [];
-        for (let i = 0; i < count; i++) {
-            posts.push({
-                id: i + 1,
-                username: `user${i + 1}`,
-                profilePic: `https://picsum.photos/32/32?random=${i}`,
-                postImage: `https://picsum.photos/414/414?random=${i}`,
-                caption: `Enjoying life! #moment${i + 1}`,
-                likes: Math.floor(Math.random() * 1000),
-                isAI: Math.random() < 0.5
-            });
-        }
-        return shuffleArray(posts);
-    }
-
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
-
-    function createPostElement(post, index) {
-        const postElement = document.createElement('div');
-        postElement.className = 'post';
-        postElement.innerHTML = `
-            <div class="post-header">
-                <img src="${post.profilePic}" alt="${post.username}">
+function createPostElement(post, index) {
+    const postElement = document.createElement('div');
+    postElement.className = 'post';
+    postElement.innerHTML = `
+        <div class="post-header">
+            <img src="${post.profilePic}" alt="${post.username}">
+            <div>
                 <div class="post-username">${post.username}</div>
-                <div class="post-options">•••</div>
+                ${post.isAI ? '<div class="post-ai-label">Contains AI info</div>' : ''}
             </div>
-            <img class="post-image" src="${post.postImage}" alt="Post image">
-            <div class="post-actions">
-                <button onclick="likePost(${index})">❤️</button>
-                <button>💬</button>
-                <button>✈️</button>
-            </div>
-            <div class="post-likes">${post.likes} likes</div>
-            <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
-        `;
-        return postElement;
+            <div class="post-options">•••</div>
+        </div>
+        <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
+        <div class="post-actions">
+            <button onclick="likePost(${index})"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like"></button>
+            <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
+            <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
+        </div>
+        <div class="post-likes">0 likes</div>
+        <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
+    `;
+    return postElement;
+}
+
+function loadPosts() {
+    const postsContainer = document.getElementById('posts');
+    postsContainer.innerHTML = '';
+
+    const posts = generatePosts();
+    posts.forEach((post, index) => {
+        const postElement = createPostElement(post, index);
+        postsContainer.appendChild(postElement);
+        postViewTimes[index] = Date.now();
+    });
+
+    window.addEventListener('scroll', handleScroll);
+}
+
+async function likePost(postId) {
+    const likeButton = document.querySelector(`.post:nth-child(${postId + 1}) .post-actions button:first-child img`);
+    const likesElement = document.querySelector(`.post:nth-child(${postId + 1}) .post-likes`);
+    let likes = parseInt(likesElement.textContent);
+    
+    if (likeButton.src.includes('ios')) {
+        likeButton.src = 'https://img.icons8.com/ios-filled/50/000000/hearts--v1.png';
+        likes++;
+    } else {
+        likeButton.src = 'https://img.icons8.com/ios/50/000000/hearts--v1.png';
+        likes--;
     }
+    
+    likesElement.textContent = `${likes} likes`;
 
-    async function likePost(postId) {
-        const likeButton = document.querySelector(`.post:nth-child(${postId + 1}) .post-actions button:first-child`);
-        const likesElement = document.querySelector(`.post:nth-child(${postId + 1}) .post-likes`);
-        let likes = parseInt(likesElement.textContent);
-        
-        if (likeButton.style.color !== 'red') {
-            likeButton.style.color = 'red';
-            likes++;
-        } else {
-            likeButton.style.color = 'black';
-            likes--;
-        }
-        
-        likesElement.textContent = `${likes} likes`;
+    const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
+    updatePostData(postId, likes, viewTime);
+    postViewTimes[postId] = Date.now();
+}
 
-        const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
-        updatePostData(postId, likes, viewTime);
-        postViewTimes[postId] = Date.now();
-    }
+function handleScroll() {
+    updateViewTimes();
+}
 
-    function handleScroll() {
-        updateViewTimes();
-    }
+function updateViewTimes() {
+    const posts = document.querySelectorAll('.post');
+    const viewportHeight = window.innerHeight;
 
-    function updateViewTimes() {
-        const posts = document.querySelectorAll('.post');
-        const viewportHeight = window.innerHeight;
+    posts.forEach((post, index) => {
+        const rect = post.getBoundingClientRect();
+        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+        const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
 
-        posts.forEach((post, index) => {
-            const rect = post.getBoundingClientRect();
-            const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
-            const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
-
-            if (visibleArea > 0) {
-                if (!postViewTimes[index]) {
+        if (visibleArea > 0) {
+            if (!postViewTimes[index]) {
                     postViewTimes[index] = Date.now();
                 }
             } else if (postViewTimes[index]) {
