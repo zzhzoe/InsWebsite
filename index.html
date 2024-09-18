@@ -516,20 +516,61 @@ function updateViewTimes() {
 }
 
 
-    async function updatePostData(postId, likes, viewTime) {
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                posts: firebase.firestore.FieldValue.arrayUnion({
-                    id: postId,
-                    likes: likes,
-                    viewTime: viewTime
-                })
-            });
-        } catch (error) {
-            console.error("Error updating post data:", error);
-        }
+   let postDataCache = {};
+
+function updatePostData(postId, likes, viewTime) {
+    if (!postDataCache[postId]) {
+        postDataCache[postId] = {
+            id: postId,
+            totalViewTime: 0,
+            viewCount: 0,
+            likes: likes,
+            lastUpdateTime: Date.now()
+        };
     }
+
+    const postData = postDataCache[postId];
     
+    // 更新查看时间
+    postData.totalViewTime += viewTime;
+    postData.viewCount++;
+    
+    // 更新点赞数
+    postData.likes = likes;
+
+    // 如果距离上次更新超过10秒，或者累积的查看时间超过30秒，则发送更新
+    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
+        sendPostDataUpdate(postId);
+    }
+}
+
+function sendPostDataUpdate(postId) {
+    const postData = postDataCache[postId];
+    if (!postData) return;
+
+    // 发送数据到服务器
+    db.collection('users').doc(userData.docId).update({
+        posts: firebase.firestore.FieldValue.arrayUnion({
+            id: postData.id,
+            likes: postData.likes,
+            totalViewTime: Math.round(postData.totalViewTime * 100) / 100, // 保留两位小数
+            viewCount: postData.viewCount,
+            averageViewTime: Math.round((postData.totalViewTime / postData.viewCount) * 100) / 100 // 保留两位小数
+        })
+    }).then(() => {
+        // 重置缓存数据
+        postData.totalViewTime = 0;
+        postData.viewCount = 0;
+        postData.lastUpdateTime = Date.now();
+    }).catch(error => {
+        console.error("Error updating post data:", error);
+    });
+}
+
+// 在用户离开页面时，确保所有数据都被发送
+window.addEventListener('beforeunload', () => {
+    Object.keys(postDataCache).forEach(sendPostDataUpdate);
+});
     async function submitSurvey() {
         updateViewTimes();
         
