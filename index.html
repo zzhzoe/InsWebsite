@@ -59,6 +59,7 @@
             max-width: 614px;
             margin-left: auto;
             margin-right: auto;
+            
         }
         .post-header {
             display: flex;
@@ -135,12 +136,29 @@
             width: 24px;
             height: 24px;
         }
+        #posts {
+    padding: 20px;
+    padding-bottom: 70px; 
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    max-width: 768px;
+    background-color: #fff;
+    border-top: 1px solid #dbdbdb;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+}
     </style>
 </head>
 <body>
     <div id="app">
         <div id="user-form">
-            <img src="https://www.instagram.com/static/images/web/mobile_nav_type_logo.png/735145cfe0a4.png" alt="Instagram" class="instagram-logo">
+           <img src="https://www.instagram.com/static/images/web/mobile_nav_type_logo-2x.png/1b47f9d0e595.png" alt="Instagram" class="instagram-logo">
             <form id="survey-form">
                 <input type="text" id="name" placeholder="Full Name" required>
                 <input type="text" id="studentId" placeholder="Student ID" required>
