@@ -229,11 +229,17 @@ function createPostElement(post, index) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         if (tapLength < 300 && tapLength > 0) {
-            likePost(index);
+            likePost(post.id);
             showLikeOverlay(this);
             e.preventDefault();
         }
         lastTap = currentTime;
+    });
+
+    
+    const likeButton = postElement.querySelector('.like-button');
+    likeButton.addEventListener('click', function() {
+        likePost(post.id);
     });
 
     return postElement;
@@ -276,7 +282,7 @@ function loadPosts() {
     posts.forEach((post, index) => {
         const postElement = createPostElement(post, index);
         postsContainer.appendChild(postElement);
-        postViewTimes[index] = Date.now();
+        postViewTimes[post.id] = Date.now();
     });
 }
 function updateViewTimes() {
