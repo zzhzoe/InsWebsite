@@ -49,7 +49,8 @@ let currentPage = 'user-form';
 let userData = {};
 let postViewTimes = {};
 let startTime;
-const timeLimit = 5 * 60 * 1000; // 5 minutes in milliseconds
+let postDataCache = {};
+const timeLimit = 3 * 60 * 1000; // 5 minutes in milliseconds
 
 // Firebase configuration
 const firebaseConfig = {
@@ -300,11 +301,7 @@ function loadPosts() {
         postViewTimes[index] = Date.now();
     });
 }
-
-function handleScroll() {
-    updateViewTimes();
-}
-
+        
 const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒，可以根据需要调整
 
 let postViewStates = {};
@@ -348,9 +345,6 @@ function updateViewTimes() {
     });
 }
 
-
-   let postDataCache = {};
-
 function updatePostData(postId, likes, viewTime) {
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
@@ -378,41 +372,61 @@ function sendPostDataUpdate(postId) {
     if (!postData) return;
 
     const userDocRef = db.collection('users').doc(userData.docId);
-    const postDocRef = userDocRef.collection('postInteractions').doc(postId.toString());
 
-    db.runTransaction(async (transaction) => {
-        const postDoc = await transaction.get(postDocRef);
-        if (!postDoc.exists) {
-            transaction.set(postDocRef, {
-                id: postData.id,
-                likes: postData.likes,
-                totalViewTime: postData.totalViewTime,
-                viewCount: postData.viewCount,
-                lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
-            });
+    userDocRef.get().then((doc) => {
+        if (doc.exists) {
+            const currentPosts = doc.data().posts || [];
+            const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
+
+            let updatedPosts;
+            if (existingPostIndex !== -1) {
+                // Update existing post data
+                updatedPosts = [...currentPosts];
+                updatedPosts[existingPostIndex] = {
+                    ...updatedPosts[existingPostIndex],
+                    likes: postData.likes,
+                    totalViewTime: (updatedPosts[existingPostIndex].totalViewTime || 0) + postData.totalViewTime,
+                    viewCount: (updatedPosts[existingPostIndex].viewCount || 0) + postData.viewCount,
+                    lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
+                };
+            } else {
+                // Add new post data
+                updatedPosts = [
+                    ...currentPosts,
+                    {
+                        id: postData.id,
+                        likes: postData.likes,
+                        totalViewTime: postData.totalViewTime,
+                        viewCount: postData.viewCount,
+                        lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
+                    }
+                ];
+            }
+
+            return userDocRef.update({ posts: updatedPosts });
         } else {
-            const existingData = postDoc.data();
-            transaction.update(postDocRef, {
-                likes: postData.likes,
-                totalViewTime: firebase.firestore.FieldValue.increment(postData.totalViewTime),
-                viewCount: firebase.firestore.FieldValue.increment(postData.viewCount),
-                lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            console.error("User document does not exist!");
+            return Promise.reject("User document does not exist");
         }
     }).then(() => {
         postData.totalViewTime = 0;
         postData.viewCount = 0;
         postData.lastUpdateTime = Date.now();
-    }).catch(error => {
+        console.log("Post data successfully updated");
+    }).catch((error) => {
         console.error("Error updating post data:", error);
     });
 }
 
-// 在用户离开页面时，确保所有数据都被发送
+// Event listeners
 window.addEventListener('scroll', handleScroll);
 window.addEventListener('beforeunload', () => {
     Object.keys(postDataCache).forEach(sendPostDataUpdate);
 });
+
+function handleScroll() {
+    updateViewTimes();
+}
     async function submitSurvey() {
         updateViewTimes();
 
@@ -424,7 +438,8 @@ window.addEventListener('beforeunload', () => {
                 updatePostData(parseInt(index), likes, viewTime);
             }
         });
-
+        
+        await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
         try {
             await db.collection('users').doc(userData.docId).update({
                 surveyCompleted: true,
