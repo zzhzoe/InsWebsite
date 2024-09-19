@@ -9,11 +9,6 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-  <symbol id="info-icon" viewBox="0 0 24 24">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-  </symbol>
-</svg>
      <div id="app">
         <div id="user-form">
            <img src="https://zzhzoe.github.io/InsWebsite/post_images/IMG_0619.PNG" alt="Instagram" class="instagram-logo">
@@ -224,12 +219,12 @@ function createPostElement(post, index) {
     const instagramBlue = '#00376b';
 
     const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
-    postElement.innerHTML = `
+   postElement.innerHTML = `
         <div class="post-header">
             <img src="${post.profilePic}" alt="${post.username}">
             <div>
                 <div class="post-username">${post.username}</div>
-                ${post.isAI ? '<div class="post-ai-label"><svg class="info-icon"><use xlink:href="#info-icon"/></svg> AI-generated content</div>' : ''}
+                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">&#8505;</span> AI-generated content</div>' : ''}
             </div>
             <div class="post-options">•••</div>
         </div>
