@@ -219,12 +219,12 @@ function createPostElement(post, index) {
     const instagramBlue = '#00376b';
 
     const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
-    postElement.innerHTML = `
+   postElement.innerHTML = `
         <div class="post-header">
             <img src="${post.profilePic}" alt="${post.username}">
             <div>
                 <div class="post-username">${post.username}</div>
-                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">ℹ️</span> AI-generated content</div>' : ''}
+                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">&#8505;</span> AI-generated content</div>' : ''}
             </div>
             <div class="post-options">•••</div>
         </div>
@@ -299,8 +299,6 @@ function loadPosts() {
         postsContainer.appendChild(postElement);
         postViewTimes[index] = Date.now();
     });
-
-    window.addEventListener('scroll', handleScroll);
 }
 
 function handleScroll() {
@@ -321,7 +319,7 @@ function updateViewTimes() {
         const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
         const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
 
-        if (visibleArea > 20) { // 只有当帖子至少有20%可见时才考虑
+        if (visibleArea > 20) {
             if (!postViewStates[index]) {
                 postViewStates[index] = {
                     startTime: currentTime,
@@ -366,34 +364,42 @@ function updatePostData(postId, likes, viewTime) {
 
     const postData = postDataCache[postId];
 
-    // 更新查看时间
     postData.totalViewTime += viewTime;
     postData.viewCount++;
-    
-    // 更新点赞数
     postData.likes = likes;
 
-    // 如果距离上次更新超过10秒，或者累积的查看时间超过30秒，则发送更新
     if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
         sendPostDataUpdate(postId);
     }
 }
-
+        
 function sendPostDataUpdate(postId) {
     const postData = postDataCache[postId];
     if (!postData) return;
 
-    // 发送数据到服务器
-    db.collection('users').doc(userData.docId).update({
-        posts: firebase.firestore.FieldValue.arrayUnion({
-            id: postData.id,
-            likes: postData.likes,
-            totalViewTime: Math.round(postData.totalViewTime * 100) / 100, // 保留两位小数
-            viewCount: postData.viewCount,
-            averageViewTime: Math.round((postData.totalViewTime / postData.viewCount) * 100) / 100 // 保留两位小数
-        })
+    const userDocRef = db.collection('users').doc(userData.docId);
+    const postDocRef = userDocRef.collection('postInteractions').doc(postId.toString());
+
+    db.runTransaction(async (transaction) => {
+        const postDoc = await transaction.get(postDocRef);
+        if (!postDoc.exists) {
+            transaction.set(postDocRef, {
+                id: postData.id,
+                likes: postData.likes,
+                totalViewTime: postData.totalViewTime,
+                viewCount: postData.viewCount,
+                lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            const existingData = postDoc.data();
+            transaction.update(postDocRef, {
+                likes: postData.likes,
+                totalViewTime: firebase.firestore.FieldValue.increment(postData.totalViewTime),
+                viewCount: firebase.firestore.FieldValue.increment(postData.viewCount),
+                lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
     }).then(() => {
-        // 重置缓存数据
         postData.totalViewTime = 0;
         postData.viewCount = 0;
         postData.lastUpdateTime = Date.now();
@@ -403,6 +409,7 @@ function sendPostDataUpdate(postId) {
 }
 
 // 在用户离开页面时，确保所有数据都被发送
+window.addEventListener('scroll', handleScroll);
 window.addEventListener('beforeunload', () => {
     Object.keys(postDataCache).forEach(sendPostDataUpdate);
 });
