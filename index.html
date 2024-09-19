@@ -392,7 +392,82 @@ document.getElementById('survey-form').addEventListener('submit', async function
         gender: document.getElementById('gender').value,
         age: parseInt(document.getElementById('age').value),
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        posts: []
+  posts: [
+    // 9个固定的帖子
+    {
+      postId: "cats_golden",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+    {
+      postId: "greenly",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+    {
+      postId: "borcelle_ig",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+    {
+      postId: "saadl.bike",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },{
+      postId: "beautee.weekly",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+         {
+      postId: "getawaydotcom",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+    {
+      postId: "reads.by.rio",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+    {
+      postId: "memebot.19",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+    {
+      postId: "teaNature",
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now()
+    },
+    {
+      postId: null,
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now(),
+      isRandomPost: true
+    }
+  ],
+  surveyCompleted: false,
+  totalTime: 0
+};
     };
     
     try {
@@ -498,23 +573,91 @@ function showLikeOverlay(container) {
         overlay.style.display = 'none';
     }, 1500);
 }
-
+        
 function loadPosts() {
-    const postsContainer = document.getElementById('posts');
-    postsContainer.innerHTML = '';
+  const postsContainer = document.getElementById('posts');
+  postsContainer.innerHTML = '';
 
-    const posts = generatePosts();
-    posts.forEach((post, index) => {
-        const postElement = createPostElement(post, index);
-        postsContainer.appendChild(postElement);
-        postViewTimes[index] = Date.now();
-    });
+  // 选择随机帖子
+  const randomVariablePost = variablePosts[Math.floor(Math.random() * variablePosts.length)];
+  
+  // 更新用户文档中的随机帖子信息
+  updateRandomPostInUserDoc(randomVariablePost.id);
 
-    window.addEventListener('scroll', handleScroll);
+  const posts = [...fixedPosts, randomVariablePost];
+  const shuffledPosts = shuffleArray(posts);
+
+  shuffledPosts.forEach((post, index) => {
+    const postElement = createPostElement(post, index);
+    postsContainer.appendChild(postElement);
+    postViewTimes[post.id] = Date.now();
+  });
+
+  window.addEventListener('scroll', handleScroll);
 }
 
-function handleScroll() {
-    updateViewTimes();
+async function createUserDocument(userData) {
+  const userRef = db.collection('users').doc();
+  
+  const fixedPosts = [
+    "cats_golden", "greenly", "borcelle_ig", "saadl.bike", 
+    "beautee.weekly", "getawaydotcom", "reads.by.rio", 
+    "Memebot.19", "teaNature"
+  ].map(postId => ({
+    postId,
+    totalViewTime: 0,
+    viewCount: 0,
+    likes: 0,
+    lastUpdateTime: Date.now()
+  }));
+
+  const randomPost = {
+    postId: null,
+    totalViewTime: 0,
+    viewCount: 0,
+    likes: 0,
+    lastUpdateTime: Date.now(),
+    isRandomPost: true
+  };
+
+  const userDocData = {
+    ...userData,
+    posts: [...fixedPosts, randomPost],
+    surveyCompleted: false,
+    totalTime: 0,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  await userRef.set(userDocData);
+  return userRef.id;
+}
+
+
+
+async function updateRandomPostInUserDoc(randomPostId) {
+  const userRef = db.collection('users').doc(userData.docId);
+  
+  await userRef.update({
+    'posts': firebase.firestore.FieldValue.arrayRemove({
+      postId: null,
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now(),
+      isRandomPost: true
+    })
+  });
+
+  await userRef.update({
+    'posts': firebase.firestore.FieldValue.arrayUnion({
+      postId: randomPostId,
+      totalViewTime: 0,
+      viewCount: 0,
+      likes: 0,
+      lastUpdateTime: Date.now(),
+      isRandomPost: true
+    })
+  });
 }
 
 const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒，可以根据需要调整
@@ -563,16 +706,34 @@ function updateViewTimes() {
 
    let postDataCache = {};
 
-function updatePostData(postId, likes, viewTime) {
-    if (!postDataCache[postId]) {
-        postDataCache[postId] = {
-            id: postId,
-            totalViewTime: 0,
-            viewCount: 0,
-            likes: likes,
-            lastUpdateTime: Date.now()
-        };
-    }
+async function updatePostData(postId, viewTime, isLiked) {
+  const userRef = db.collection('users').doc(userData.docId);
+  
+  try {
+    await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      const posts = userDoc.data().posts;
+      
+      const postIndex = posts.findIndex(p => p.postId === postId);
+      if (postIndex === -1) {
+        console.error(`Post with id ${postId} not found`);
+        return;
+      }
+      
+      const post = posts[postIndex];
+      post.totalViewTime += viewTime;
+      post.viewCount += 1;
+      if (isLiked) {
+        post.likes += 1;
+      }
+      post.lastUpdateTime = Date.now();
+      
+      transaction.update(userRef, { posts: posts });
+    });
+  } catch (error) {
+    console.error("Error updating post data:", error);
+  }
+}
 
     const postData = postDataCache[postId];
     
