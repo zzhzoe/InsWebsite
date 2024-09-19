@@ -422,6 +422,9 @@ function shuffleArray(array) {
 function createPostElement(post, index) {
     const postElement = document.createElement('div');
     postElement.className = 'post';
+    const instagramBlue = '#00376b';
+
+    const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
     postElement.innerHTML = `
         <div class="post-header">
             <img src="${post.profilePic}" alt="${post.username}">
@@ -443,7 +446,7 @@ ${post.isAI ? '<div class="post-ai-label"><span class="warning-icon">⚠️</spa
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
         <div class="post-likes">0 likes</div>
-        <div class="post-caption"><strong>${post.username}</strong> ${post.caption}</div>
+        <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
     `;
 
     const postImageContainer = postElement.querySelector('.post-image-container');
