@@ -6,220 +6,10 @@
     <title>Instagram Feed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #fafafa;
-            margin: 0;
-            padding: 0;
-        }
-        #app {
-            max-width: 768px; /* iPad width */
-            margin: 0 auto;
-            background-color: #fff;
-        }
-        #user-form, #posts, #thank-you {
-            padding: 20px;
-        }
-        h2 {
-            text-align: center;
-            color: #262626;
-        }
-        .instagram-logo {
-            display: block;
-            width: 175px;
-            margin: 22px auto;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            max-width: 350px;
-            margin: 0 auto;
-        }
-        input, select {
-            margin-bottom: 10px;
-            padding: 9px 0 7px 8px;
-            background: #fafafa;
-            border: 1px solid #dbdbdb;
-            border-radius: 3px;
-        }
-        button {
-            margin-top: 10px;
-            padding: 5px 9px;
-            background-color: #0095f6;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .post {
-            border-bottom: 1px solid #efefef;
-            margin-bottom: 12px;
-            max-width: 614px;
-            margin-left: auto;
-            margin-right: auto;
-            
-        }
-        .post-header {
-            display: flex;
-            align-items: center;
-            padding: 14px 16px;
-        }
-        .post-header img {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-        .post-username {
-            font-weight: 600;
-            color: #262626;
-        }
-        .post-ai-label {
-            font-size: 0.8em;
-            color: #8e8e8e;
-            margin-top: 2px;
-        }
-        .post-options {
-            margin-left: auto;
-            font-weight: bold;
-            font-size: 16px;
-            color: #262626;
-        }
-        .post-image {
-            width: 100%;
-            height: auto;
-        }
-        .post-actions {
-            display: flex;
-            padding: 6px 16px;
-        }
-        .post-actions button {
-            background: none;
-            border: none;
-            padding: 8px 0;
-            margin-right: 16px;
-            cursor: pointer;
-        }
-        .post-actions img {
-            width: 24px;
-            height: 24px;
-        }
-        .post-likes {
-            font-weight: 600;
-            margin: 0 16px 8px;
-            color: #262626;
-        }
-        .post-caption {
-            margin: 0 16px 8px;
-            color: #262626;
-        }
-        .footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            max-width: 768px;
-            background-color: #fff;
-            border-top: 1px solid #dbdbdb;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-        }
-        .footer button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            margin: 0;
-        }
-        .footer img {
-            width: 24px;
-            height: 24px;
-        }
-        #posts {
-    padding: 20px;
-    padding-bottom: 70px; 
-}
-
-.footer {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    max-width: 768px;
-    background-color: #fff;
-    border-top: 1px solid #dbdbdb;
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-    z-index: 1000;
-}
-
-        .post-image-container {
-    position: relative;
-    overflow: hidden;
-}
-
-.like-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    pointer-events: none;
-}
-
-.like-overlay img {
-    width: 80px;
-    height: 80px;
-    opacity: 0;
-    transform: scale(0) translateY(0);
-    animation: likeAnimation 1.5s forwards;
-}
-
-@keyframes likeAnimation {
-    0% {
-        opacity: 0;
-        transform: scale(0) translateY(0);
-    }
-    15% {
-        opacity: 1;
-        transform: scale(1.2) translateY(0);
-    }
-    30% {
-        transform: scale(0.95) translateY(0);
-    }
-    45%, 80% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(0.3) translateY(-100px);
-    }
-}
-
-    .post-ai-label {
-        display: flex;
-        align-items: center;
-        font-size: 0.7em;
-        color: #8e8e8e;
-        margin-top: 2px;
-    }
-
-    .info-icon {
-        font-size: 1em;
-        margin-right: 4px;
-        color: #8e8e8e;
-    }
-</style>
-
-
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app">
+     <div id="app">
         <div id="user-form">
            <img src="https://zzhzoe.github.io/InsWebsite/post_images/IMG_0619.PNG" alt="Instagram" class="instagram-logo">
             <form id="survey-form">
@@ -255,12 +45,6 @@
     </div>
 
     <script>
-let currentPage = 'user-form';
-let userData = {};
-let postViewTimes = {};
-let startTime;
-const timeLimit = 5 * 60 * 1000; // 5 minutes in milliseconds
-    
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
@@ -275,6 +59,15 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+let currentPage = 'user-form';
+let userData = {};
+let postViewTimes = {};
+let startTime;
+let postDataCache = {};
+const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
+const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
+let postViewStates = {};
 
 const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
 const fixedPosts = [
@@ -371,7 +164,7 @@ const variablePosts = [
         isAI: true
     }
 ];
-function showPage(pageId) {
+        function showPage(pageId) {
     document.getElementById('user-form').style.display = 'none';
     document.getElementById('posts').style.display = 'none';
     document.getElementById('thank-you').style.display = 'none';
@@ -382,31 +175,6 @@ function showPage(pageId) {
         document.querySelector('.footer').style.display = 'flex';
     }
 }
-
-document.getElementById('survey-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    userData = {
-        name: document.getElementById('name').value,
-        studentId: document.getElementById('studentId').value,
-        gender: document.getElementById('gender').value,
-        age: parseInt(document.getElementById('age').value),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        posts: []
-    };
-    
-    try {
-        const docRef = await db.collection('users').add(userData);
-        userData.docId = docRef.id;
-        showPage('posts');
-        loadPosts();
-        startTime = Date.now();
-        setTimeout(submitSurvey, timeLimit);
-    } catch (error) {
-        console.error("Error submitting data:", error);
-        alert('Error logging in. Please try again.');
-    }
-});
 
 function generatePosts() {
     const posts = [...fixedPosts];
@@ -434,7 +202,7 @@ function createPostElement(post, index) {
             <img src="${post.profilePic}" alt="${post.username}">
             <div>
                 <div class="post-username">${post.username}</div>
-                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">ℹ️</span> AI-generated content</div>' : ''}
+                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">&#8505;</span> AI-generated content</div>' : ''}
             </div>
             <div class="post-options">•••</div>
         </div>
@@ -475,7 +243,7 @@ function likePost(postId) {
     const likeButton = post.querySelector('.like-button');
     const likesElement = post.querySelector('.post-likes');
     let likes = parseInt(likesElement.textContent);
-    
+
     if (likeButton.src.includes('ios/50')) {
         likeButton.src = 'https://img.icons8.com/ios-filled/50/ff0000/hearts.png';
         likes++;
@@ -483,7 +251,7 @@ function likePost(postId) {
         likeButton.src = 'https://img.icons8.com/ios/50/000000/hearts--v1.png';
         likes--;
     }
-    
+
     likesElement.textContent = `${likes} likes`;
 
     const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
@@ -509,19 +277,8 @@ function loadPosts() {
         postsContainer.appendChild(postElement);
         postViewTimes[index] = Date.now();
     });
-
-    window.addEventListener('scroll', handleScroll);
 }
-
-function handleScroll() {
-    updateViewTimes();
-}
-
-const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒，可以根据需要调整
-
-let postViewStates = {};
-
-function updateViewTimes() {
+        function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
     const currentTime = Date.now();
@@ -531,7 +288,7 @@ function updateViewTimes() {
         const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
         const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
 
-        if (visibleArea > 20) { // 只有当帖子至少有20%可见时才考虑
+        if (visibleArea > 20) {
             if (!postViewStates[index]) {
                 postViewStates[index] = {
                     startTime: currentTime,
@@ -560,10 +317,9 @@ function updateViewTimes() {
     });
 }
 
-
-   let postDataCache = {};
-
 function updatePostData(postId, likes, viewTime) {
+    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime}`);
+
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
             id: postId,
@@ -575,16 +331,15 @@ function updatePostData(postId, likes, viewTime) {
     }
 
     const postData = postDataCache[postId];
-    
-    // 更新查看时间
+
     postData.totalViewTime += viewTime;
     postData.viewCount++;
-    
-    // 更新点赞数
     postData.likes = likes;
 
-    // 如果距离上次更新超过10秒，或者累积的查看时间超过30秒，则发送更新
+    console.log(`Updated post data: `, postData);
+
     if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
+        console.log(`Sending update for post ${postId}`);
         sendPostDataUpdate(postId);
     }
 }
@@ -593,56 +348,122 @@ function sendPostDataUpdate(postId) {
     const postData = postDataCache[postId];
     if (!postData) return;
 
-    // 发送数据到服务器
-    db.collection('users').doc(userData.docId).update({
-        posts: firebase.firestore.FieldValue.arrayUnion({
-            id: postData.id,
-            likes: postData.likes,
-            totalViewTime: Math.round(postData.totalViewTime * 100) / 100, // 保留两位小数
-            viewCount: postData.viewCount,
-            averageViewTime: Math.round((postData.totalViewTime / postData.viewCount) * 100) / 100 // 保留两位小数
-        })
+    const userDocRef = db.collection('users').doc(userData.docId);
+
+    userDocRef.get().then((doc) => {
+        if (doc.exists) {
+            const currentPosts = doc.data().posts || [];
+            const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
+
+            let updatedPosts;
+            const currentTime = new Date().toISOString(); // Use ISO string instead of serverTimestamp
+
+            if (existingPostIndex !== -1) {
+                // Update existing post data
+                updatedPosts = [...currentPosts];
+                updatedPosts[existingPostIndex] = {
+                    ...updatedPosts[existingPostIndex],
+                    likes: postData.likes,
+                    totalViewTime: (updatedPosts[existingPostIndex].totalViewTime || 0) + postData.totalViewTime,
+                    viewCount: (updatedPosts[existingPostIndex].viewCount || 0) + postData.viewCount,
+                    lastUpdateTime: currentTime
+                };
+            } else {
+                // Add new post data
+                updatedPosts = [
+                    ...currentPosts,
+                    {
+                        id: postData.id,
+                        likes: postData.likes,
+                        totalViewTime: postData.totalViewTime,
+                        viewCount: postData.viewCount,
+                        lastUpdateTime: currentTime
+                    }
+                ];
+            }
+
+            return userDocRef.update({ posts: updatedPosts });
+        } else {
+            console.error("User document does not exist!");
+            return Promise.reject("User document does not exist");
+        }
     }).then(() => {
-        // 重置缓存数据
         postData.totalViewTime = 0;
         postData.viewCount = 0;
         postData.lastUpdateTime = Date.now();
-    }).catch(error => {
+        console.log("Post data successfully updated");
+    }).catch((error) => {
         console.error("Error updating post data:", error);
     });
 }
-
-// 在用户离开页面时，确保所有数据都被发送
+        // Event listeners
+window.addEventListener('scroll', handleScroll);
 window.addEventListener('beforeunload', () => {
     Object.keys(postDataCache).forEach(sendPostDataUpdate);
 });
-    async function submitSurvey() {
-        updateViewTimes();
-        
-        Object.keys(postViewTimes).forEach(index => {
-            if (postViewTimes[index]) {
-                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                const post = document.querySelectorAll('.post')[index];
-                const likes = parseInt(post.querySelector('.post-likes').textContent);
-                updatePostData(parseInt(index), likes, viewTime);
-            }
+
+function handleScroll() {
+    updateViewTimes();
+}
+
+async function submitSurvey() {
+    updateViewTimes();
+
+    Object.keys(postViewTimes).forEach(index => {
+        if (postViewTimes[index]) {
+            const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+            const post = document.querySelectorAll('.post')[index];
+            const likes = parseInt(post.querySelector('.post-likes').textContent);
+            updatePostData(parseInt(index), likes, viewTime);
+        }
+    });
+    
+    await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true,
+            totalTime: (Date.now() - startTime) / 1000
         });
+        showPage('thank-you');
+    } catch (error) {
+        console.error("Error submitting survey:", error);
+        alert('Error submitting data. Your responses may not have been saved.');
+    }
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    showPage('user-form');
+
+    document.getElementById('survey-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        userData = {
+            name: document.getElementById('name').value,
+            studentId: document.getElementById('studentId').value,
+            gender: document.getElementById('gender').value,
+            age: parseInt(document.getElementById('age').value),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            posts: []
+        };
 
         try {
-            await db.collection('users').doc(userData.docId).update({
-                surveyCompleted: true,
-                totalTime: (Date.now() - startTime) / 1000
-            });
-            showPage('thank-you');
+            const docRef = await db.collection('users').add(userData);
+            userData.docId = docRef.id;
+            showPage('posts');
+            loadPosts();
+            startTime = Date.now();
+            setTimeout(submitSurvey, timeLimit);
         } catch (error) {
-            console.error("Error submitting survey:", error);
-            alert('Error submitting data. Your responses may not have been saved.');
+            console.error("Error submitting data:", error);
+            alert('Error logging in. Please try again.');
         }
-    }
-
-    window.addEventListener('load', function() {
-        showPage('user-form');
     });
+});
+
+// Console log for debugging
+console.log('JavaScript loaded and running');
+
     </script>
 </body>
 </html>
