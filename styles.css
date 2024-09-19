@@ -194,9 +194,8 @@ button {
     }
 
     .info-icon {
-        width: 12px;
-        height: 12px;
+        font-size: 1em;
         margin-right: 4px;
-        fill: #8e8e8e;
+        color: #8e8e8e;
     }
 </style>
