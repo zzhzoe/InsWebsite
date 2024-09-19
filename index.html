@@ -45,13 +45,6 @@
     </div>
 
     <script>
-let currentPage = 'user-form';
-let userData = {};
-let postViewTimes = {};
-let startTime;
-let postDataCache = {};
-const timeLimit = 3 * 60 * 1000; // 5 minutes in milliseconds
-
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
@@ -66,6 +59,15 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+let currentPage = 'user-form';
+let userData = {};
+let postViewTimes = {};
+let startTime;
+let postDataCache = {};
+const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
+const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
+let postViewStates = {};
 
 const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
 const fixedPosts = [
@@ -162,7 +164,7 @@ const variablePosts = [
         isAI: true
     }
 ];
-function showPage(pageId) {
+        function showPage(pageId) {
     document.getElementById('user-form').style.display = 'none';
     document.getElementById('posts').style.display = 'none';
     document.getElementById('thank-you').style.display = 'none';
@@ -173,31 +175,6 @@ function showPage(pageId) {
         document.querySelector('.footer').style.display = 'flex';
     }
 }
-
-document.getElementById('survey-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    userData = {
-        name: document.getElementById('name').value,
-        studentId: document.getElementById('studentId').value,
-        gender: document.getElementById('gender').value,
-        age: parseInt(document.getElementById('age').value),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        posts: []
-    };
-
-    try {
-        const docRef = await db.collection('users').add(userData);
-        userData.docId = docRef.id;
-        showPage('posts');
-        loadPosts();
-        startTime = Date.now();
-        setTimeout(submitSurvey, timeLimit);
-    } catch (error) {
-        console.error("Error submitting data:", error);
-        alert('Error logging in. Please try again.');
-    }
-});
 
 function generatePosts() {
     const posts = [...fixedPosts];
@@ -220,7 +197,7 @@ function createPostElement(post, index) {
     const instagramBlue = '#00376b';
 
     const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
-   postElement.innerHTML = `
+    postElement.innerHTML = `
         <div class="post-header">
             <img src="${post.profilePic}" alt="${post.username}">
             <div>
@@ -301,12 +278,7 @@ function loadPosts() {
         postViewTimes[index] = Date.now();
     });
 }
-        
-const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒，可以根据需要调整
-
-let postViewStates = {};
-
-function updateViewTimes() {
+        function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
     const currentTime = Date.now();
@@ -346,6 +318,8 @@ function updateViewTimes() {
 }
 
 function updatePostData(postId, likes, viewTime) {
+    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime}`);
+
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
             id: postId,
@@ -362,11 +336,14 @@ function updatePostData(postId, likes, viewTime) {
     postData.viewCount++;
     postData.likes = likes;
 
+    console.log(`Updated post data: `, postData);
+
     if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
+        console.log(`Sending update for post ${postId}`);
         sendPostDataUpdate(postId);
     }
 }
-        
+
 function sendPostDataUpdate(postId) {
     const postData = postDataCache[postId];
     if (!postData) return;
@@ -379,6 +356,8 @@ function sendPostDataUpdate(postId) {
             const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
 
             let updatedPosts;
+            const currentTime = new Date().toISOString(); // Use ISO string instead of serverTimestamp
+
             if (existingPostIndex !== -1) {
                 // Update existing post data
                 updatedPosts = [...currentPosts];
@@ -387,7 +366,7 @@ function sendPostDataUpdate(postId) {
                     likes: postData.likes,
                     totalViewTime: (updatedPosts[existingPostIndex].totalViewTime || 0) + postData.totalViewTime,
                     viewCount: (updatedPosts[existingPostIndex].viewCount || 0) + postData.viewCount,
-                    lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
+                    lastUpdateTime: currentTime
                 };
             } else {
                 // Add new post data
@@ -398,7 +377,7 @@ function sendPostDataUpdate(postId) {
                         likes: postData.likes,
                         totalViewTime: postData.totalViewTime,
                         viewCount: postData.viewCount,
-                        lastUpdateTime: firebase.firestore.FieldValue.serverTimestamp()
+                        lastUpdateTime: currentTime
                     }
                 ];
             }
@@ -417,8 +396,7 @@ function sendPostDataUpdate(postId) {
         console.error("Error updating post data:", error);
     });
 }
-
-// Event listeners
+        // Event listeners
 window.addEventListener('scroll', handleScroll);
 window.addEventListener('beforeunload', () => {
     Object.keys(postDataCache).forEach(sendPostDataUpdate);
@@ -427,34 +405,65 @@ window.addEventListener('beforeunload', () => {
 function handleScroll() {
     updateViewTimes();
 }
-    async function submitSurvey() {
-        updateViewTimes();
 
-        Object.keys(postViewTimes).forEach(index => {
-            if (postViewTimes[index]) {
-                const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-                const post = document.querySelectorAll('.post')[index];
-                const likes = parseInt(post.querySelector('.post-likes').textContent);
-                updatePostData(parseInt(index), likes, viewTime);
-            }
-        });
-        
-        await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                surveyCompleted: true,
-                totalTime: (Date.now() - startTime) / 1000
-            });
-            showPage('thank-you');
-        } catch (error) {
-            console.error("Error submitting survey:", error);
-            alert('Error submitting data. Your responses may not have been saved.');
+async function submitSurvey() {
+    updateViewTimes();
+
+    Object.keys(postViewTimes).forEach(index => {
+        if (postViewTimes[index]) {
+            const viewTime = (Date.now() - postViewTimes[index]) / 1000;
+            const post = document.querySelectorAll('.post')[index];
+            const likes = parseInt(post.querySelector('.post-likes').textContent);
+            updatePostData(parseInt(index), likes, viewTime);
         }
-    }
-
-    window.addEventListener('load', function() {
-        showPage('user-form');
     });
+    
+    await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
+    try {
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true,
+            totalTime: (Date.now() - startTime) / 1000
+        });
+        showPage('thank-you');
+    } catch (error) {
+        console.error("Error submitting survey:", error);
+        alert('Error submitting data. Your responses may not have been saved.');
+    }
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    showPage('user-form');
+
+    document.getElementById('survey-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        userData = {
+            name: document.getElementById('name').value,
+            studentId: document.getElementById('studentId').value,
+            gender: document.getElementById('gender').value,
+            age: parseInt(document.getElementById('age').value),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            posts: []
+        };
+
+        try {
+            const docRef = await db.collection('users').add(userData);
+            userData.docId = docRef.id;
+            showPage('posts');
+            loadPosts();
+            startTime = Date.now();
+            setTimeout(submitSurvey, timeLimit);
+        } catch (error) {
+            console.error("Error submitting data:", error);
+            alert('Error logging in. Please try again.');
+        }
+    });
+});
+
+// Console log for debugging
+console.log('JavaScript loaded and running');
+
     </script>
 </body>
 </html>
