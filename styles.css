@@ -185,15 +185,17 @@ button {
         transform: scale(0.3) translateY(-100px);
     }
 }
-.post-ai-label {
-    display: flex;
-    align-items: center;
-    font-size: 0.7em;
-    color: #8e8e8e;
-    margin-top: 2px;
-}
-.info-icon {
-    font-size: 1em;
-    margin-right: 4px;
-    color: #8e8e8e;
-}
+  .post-ai-label {
+        display: flex;
+        align-items: center;
+        font-size: 0.7em;
+        color: #8e8e8e;
+        margin-top: 2px;
+    }
+
+    .info-icon {
+        font-size: 1em;
+        margin-right: 4px;
+        color: #8e8e8e;
+    }
+</style>
