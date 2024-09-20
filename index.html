@@ -302,12 +302,15 @@ function checkTimeAndSubmit() {
     }
 }
         
-let postTotalViewTimes = {};
+let lastUpdateTime = Date.now();
 
 function updateViewTimes() {
+    const currentTime = Date.now();
+    const elapsedTime = (currentTime - lastUpdateTime) / 1000;
+    lastUpdateTime = currentTime;
+
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
-    const currentTime = Date.now();
 
     posts.forEach((post) => {
         const postId = post.dataset.postId;
@@ -316,34 +319,14 @@ function updateViewTimes() {
         const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
 
         if (visibleArea > 20) {
-            if (!postViewStates[postId]) {
-                postViewStates[postId] = {
-                    startTime: currentTime,
-                    lastUpdateTime: currentTime
-                };
-                postTotalViewTimes[postId] = postTotalViewTimes[postId] || 0;
-            } else {
-                const state = postViewStates[postId];
-                const viewTime = (currentTime - state.lastUpdateTime) / 1000;
-                postTotalViewTimes[postId] += viewTime;
-                
-                // 限制每个帖子的最大 view time
-                const maxViewTimePerPost = 180; // 3分钟
-                if (postTotalViewTimes[postId] > maxViewTimePerPost) {
-                    const excessTime = postTotalViewTimes[postId] - maxViewTimePerPost;
-                    postTotalViewTimes[postId] = maxViewTimePerPost;
-                    viewTime -= excessTime;
-                }
-
-                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), viewTime);
-                state.lastUpdateTime = currentTime;
-            }
-        } else if (postViewStates[postId]) {
-            delete postViewStates[postId];
+            const viewTime = elapsedTime * (visibleArea / 100);
+            updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), viewTime);
         }
     });
 }
         
+const MAX_VIEW_TIME = 180; // 3 minutes in seconds
+
 function updatePostData(postId, likes, viewTime) {
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
@@ -357,13 +340,14 @@ function updatePostData(postId, likes, viewTime) {
 
     const postData = postDataCache[postId];
 
-    // 确保总 view time 不超过 3 分钟
-    const maxViewTime = 180; // 3分钟
-    postData.totalViewTime = Math.min(postData.totalViewTime + viewTime, maxViewTime);
+    // Ensure total view time doesn't exceed MAX_VIEW_TIME
+    postData.totalViewTime = Math.min(postData.totalViewTime + viewTime, MAX_VIEW_TIME);
     postData.viewCount++;
     postData.likes = likes;
 
-    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
+    console.log(`Post ${postId}: totalViewTime = ${postData.totalViewTime}, viewCount = ${postData.viewCount}`);
+
+    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime >= MAX_VIEW_TIME) {
         sendPostDataUpdate(postId);
     }
 }
@@ -380,26 +364,24 @@ function sendPostDataUpdate(postId) {
             const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
 
             let updatedPosts;
-            const currentTime = new Date().toISOString(); // Use ISO string instead of serverTimestamp
+            const currentTime = new Date().toISOString();
 
             if (existingPostIndex !== -1) {
-                // Update existing post data
                 updatedPosts = [...currentPosts];
                 updatedPosts[existingPostIndex] = {
                     ...updatedPosts[existingPostIndex],
                     likes: postData.likes,
-                    totalViewTime: (updatedPosts[existingPostIndex].totalViewTime || 0) + postData.totalViewTime,
-                    viewCount: (updatedPosts[existingPostIndex].viewCount || 0) + postData.viewCount,
+                    totalViewTime: Math.min(postData.totalViewTime, MAX_VIEW_TIME),
+                    viewCount: postData.viewCount,
                     lastUpdateTime: currentTime
                 };
             } else {
-                // Add new post data
                 updatedPosts = [
                     ...currentPosts,
                     {
                         id: postData.id,
                         likes: postData.likes,
-                        totalViewTime: postData.totalViewTime,
+                        totalViewTime: Math.min(postData.totalViewTime, MAX_VIEW_TIME),
                         viewCount: postData.viewCount,
                         lastUpdateTime: currentTime
                     }
@@ -412,19 +394,12 @@ function sendPostDataUpdate(postId) {
             return Promise.reject("User document does not exist");
         }
     }).then(() => {
-        postData.totalViewTime = 0;
-        postData.viewCount = 0;
         postData.lastUpdateTime = Date.now();
-        console.log("Post data successfully updated");
+        console.log(`Post data successfully updated for ${postId}`);
     }).catch((error) => {
         console.error("Error updating post data:", error);
     });
 }
-        // Event listeners
-window.addEventListener('scroll', handleScroll);
-window.addEventListener('beforeunload', () => {
-    Object.keys(postDataCache).forEach(sendPostDataUpdate);
-});
 
 function handleScroll() {
     updateViewTimes();
