@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-     <div id="app">
+    <div id="app">
         <div id="user-form">
            <img src="https://zzhzoe.github.io/InsWebsite/post_images/IMG_0619.PNG" alt="Instagram" class="instagram-logo">
             <form id="survey-form">
@@ -45,37 +45,37 @@
     </div>
 
     <script>
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
-    authDomain: "research-project-0801.firebaseapp.com",
-    projectId: "research-project-0801",
-    storageBucket: "research-project-0801.appspot.com",
-    messagingSenderId: "655922410105",
-    appId: "1:655922410105:web:b0919370054af912261aa8",
-    measurementId: "G-PX7PE1V6S3"
-};
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
+        authDomain: "research-project-0801.firebaseapp.com",
+        projectId: "research-project-0801",
+        storageBucket: "research-project-0801.appspot.com",
+        messagingSenderId: "655922410105",
+        appId: "1:655922410105:web:b0919370054af912261aa8",
+        measurementId: "G-PX7PE1V6S3"
+    };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-let currentPage = 'user-form';
-let userData = {};
-let postViewTimes = {};
-let startTime;
-let postDataCache = {};
-const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
-const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
-let postViewStates = {};
-const VISIBILITY_THRESHOLD = 50; // Percentage of post that needs to be visible
-const UPDATE_INTERVAL = 1000; // Update interval in milliseconds
-const MAX_VIEW_TIME_PER_SESSION = 180; // Maximum view time per session in seconds (e.g., 3 minutes)
-const MIN_TIME_TO_COUNT_VIEW = 1;
-let timerInterval;
+    // Global variables
+    let currentPage = 'user-form';
+    let userData = {};
+    let postViewTimes = {};
+    let startTime;
+    let postDataCache = {};
+    const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
+    const VISIBILITY_THRESHOLD = 50; // Percentage of post that needs to be visible
+    const UPDATE_INTERVAL = 200; // Update interval in milliseconds
+    let postViewStates = {};
+    let timerInterval;
+    let isSurveyCompleted = false;
 
-const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
-const fixedPosts = [
+    const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
+    
+   const fixedPosts = [
     {
         username: "cats_golden",
         profilePic: baseUrl + "post/2.jpg",
@@ -169,7 +169,8 @@ const variablePosts = [
         isAI: true
     }
 ];
-        function showPage(pageId) {
+   // Function to show different pages
+function showPage(pageId) {
     document.getElementById('user-form').style.display = 'none';
     document.getElementById('posts').style.display = 'none';
     document.getElementById('thank-you').style.display = 'none';
@@ -181,6 +182,7 @@ const variablePosts = [
     }
 }
 
+// Function to generate posts
 function generatePosts() {
     const posts = fixedPosts.map(post => ({...post, id: post.username}));
     const randomVariablePost = variablePosts[Math.floor(Math.random() * variablePosts.length)];
@@ -188,6 +190,7 @@ function generatePosts() {
     return shuffleArray(posts);
 }
 
+// Function to shuffle array
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -196,6 +199,7 @@ function shuffleArray(array) {
     return array;
 }
 
+// Function to create post element
 function createPostElement(post) {
     const postElement = document.createElement('div');
     postElement.className = 'post';
@@ -219,7 +223,7 @@ function createPostElement(post) {
             </div>
         </div>
         <div class="post-actions">
-            <button onclick="likePost(${post.id})"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like" class="like-button"></button>
+            <button class="like-button"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
@@ -248,9 +252,12 @@ function createPostElement(post) {
     return postElement;
 }
 
+// Function to handle post liking
 function likePost(postId) {
+    if (isSurveyCompleted) return;
+
     const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-    const likeButton = post.querySelector('.like-button');
+    const likeButton = post.querySelector('.like-button img');
     const likesElement = post.querySelector('.post-likes');
     let likes = parseInt(likesElement.textContent);
 
@@ -264,11 +271,10 @@ function likePost(postId) {
 
     likesElement.textContent = `${likes} likes`;
 
-    const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
-    updatePostData(postId, likes, viewTime);
-    postViewTimes[postId] = Date.now();
+    updatePostData(postId, likes, getPostViewTime(postId));
 }
 
+// Function to show like overlay
 function showLikeOverlay(container) {
     const overlay = container.querySelector('.like-overlay');
     overlay.style.display = 'flex';
@@ -277,6 +283,7 @@ function showLikeOverlay(container) {
     }, 1500);
 }
 
+// Function to load posts
 function loadPosts() {
     const postsContainer = document.getElementById('posts');
     postsContainer.innerHTML = '';
@@ -293,8 +300,10 @@ function loadPosts() {
     timerInterval = setInterval(checkTimeAndSubmit, 1000);
 }
 
-
+// Function to check time and submit survey
 function checkTimeAndSubmit() {
+    if (isSurveyCompleted) return;
+
     const currentTime = Date.now();
     const elapsedTime = currentTime - startTime;
     console.log(`Elapsed time: ${elapsedTime / 1000} seconds`);
@@ -306,13 +315,9 @@ function checkTimeAndSubmit() {
     }
 }
 
-// Constants
-const VISIBILITY_THRESHOLD = 50; // Percentage of post that needs to be visible
-const UPDATE_INTERVAL = 1000; // Update interval in milliseconds
-
-// Function to get the dimensions of fixed UI elements
+// Function to get fixed UI dimensions
 function getFixedUIDimensions() {
-    const header = document.querySelector('.header'); // Adjust selector as needed
+    const header = document.querySelector('header');
     const footer = document.querySelector('.footer');
 
     return {
@@ -321,7 +326,7 @@ function getFixedUIDimensions() {
     };
 }
 
-// Function to calculate actual visible viewport
+// Function to get actual viewport
 function getActualViewport() {
     const { headerHeight, footerHeight } = getFixedUIDimensions();
     const windowHeight = window.innerHeight || document.documentElement.clientHeight;
@@ -337,17 +342,21 @@ function getActualViewport() {
     };
 }
 
-// Function to calculate visible area of a post
+// Function to calculate post visibility
 function getPostVisibility(post) {
     const rect = post.getBoundingClientRect();
-    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+    const viewport = getActualViewport();
 
-    const visibleHeight = Math.min(rect.bottom, windowHeight) - Math.max(rect.top, 0);
-    const visibleWidth = rect.width; // Assuming full width is always visible
+    const visibleTop = Math.max(viewport.top, rect.top);
+    const visibleBottom = Math.min(viewport.bottom, rect.bottom);
+    const visibleLeft = Math.max(viewport.left, rect.left);
+    const visibleRight = Math.min(viewport.right, rect.right);
 
-    const visibleArea = visibleHeight * visibleWidth;
-    const totalArea = rect.height * rect.width;
-    
+    const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+    const totalArea = rect.width * rect.height;
+    const visibleArea = visibleWidth * visibleHeight;
     const visibilityPercentage = (visibleArea / totalArea) * 100;
 
     return {
@@ -355,8 +364,11 @@ function getPostVisibility(post) {
         visibilityPercentage: visibilityPercentage
     };
 }
-        
+
+// Function to update view times
 function updateViewTimes() {
+    if (isSurveyCompleted) return;
+
     const posts = document.querySelectorAll('.post');
     const currentTime = Date.now();
 
@@ -366,10 +378,11 @@ function updateViewTimes() {
 
         if (!postViewStates[postId]) {
             postViewStates[postId] = {
-                lastUpdateTime: currentTime,
+                lastUpdateTime: null,
                 totalViewTime: 0,
                 viewCount: 0,
-                isViewing: false
+                isViewing: false,
+                viewStartTime: null
             };
         }
 
@@ -378,78 +391,38 @@ function updateViewTimes() {
         if (visibility.isVisible) {
             if (!state.isViewing) {
                 state.isViewing = true;
-                state.lastUpdateTime = currentTime;
-            } else {
-                const viewDuration = (currentTime - state.lastUpdateTime) / 1000;
+                state.viewStartTime = currentTime;
+            } else if (currentTime - state.viewStartTime >= UPDATE_INTERVAL) {
+                const viewDuration = (currentTime - (state.lastUpdateTime || state.viewStartTime)) / 1000;
                 state.totalViewTime += viewDuration * (visibility.visibilityPercentage / 100);
                 state.lastUpdateTime = currentTime;
 
-                // Cap the total view time
-                state.totalViewTime = Math.min(state.totalViewTime, MAX_VIEW_TIME_PER_SESSION);
-
-                // Increment view count if enough time has passed
-                if (state.totalViewTime >= MIN_TIME_TO_COUNT_VIEW && state.viewCount === 0) {
+                // Increment view count if it hasn't been incremented yet
+                if (state.viewCount === 0) {
                     state.viewCount = 1;
                 }
             }
-        } else {
-            if (state.isViewing) {
-                const finalViewDuration = (currentTime - state.lastUpdateTime) / 1000;
+        } else if (state.isViewing) {
+            const finalViewDuration = (currentTime - (state.lastUpdateTime || state.viewStartTime)) / 1000;
+            if (finalViewDuration >= UPDATE_INTERVAL / 1000) {
                 state.totalViewTime += finalViewDuration * (visibility.visibilityPercentage / 100);
-                state.isViewing = false;
-
-                // Cap the total view time
-                state.totalViewTime = Math.min(state.totalViewTime, MAX_VIEW_TIME_PER_SESSION);
-
-                // Update post data
-                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), state.totalViewTime, state.viewCount);
             }
+            state.isViewing = false;
+            state.viewStartTime = null;
+            state.lastUpdateTime = null;
+
+            updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), state.totalViewTime);
         }
 
         console.log(`Post ${postId}: Visibility ${visibility.visibilityPercentage.toFixed(2)}%, Total View Time: ${state.totalViewTime.toFixed(2)}s, View Count: ${state.viewCount}`);
     });
 }
 
-function throttle(func, limit) {
-    let inThrottle;
-    return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-            func.apply(context, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    }
-}
+// Function to update post data
+function updatePostData(postId, likes, viewTime) {
+    if (isSurveyCompleted) return;
 
-// Updated event listeners
-window.addEventListener('scroll', throttle(updateViewTimes, 100));
-window.addEventListener('resize', throttle(() => {
-    updateViewTimes();
-}, 100));
-
-
-// Set interval for periodic updates
-setInterval(updateViewTimes, UPDATE_INTERVAL);
-
-// Update view times before unloading the page
-window.addEventListener('beforeunload', () => {
-    updateViewTimes();
-    Object.keys(postViewStates).forEach(postId => {
-        const state = postViewStates[postId];
-        if (state.totalViewTime > 0) {
-            const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-            if (post) {
-                const likes = parseInt(post.querySelector('.post-likes').textContent);
-                updatePostData(postId, likes, state.totalViewTime);
-            }
-        }
-    });
-});
-        
-function updatePostData(postId, likes, viewTime, viewCount) {
-    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime.toFixed(2)}, viewCount=${viewCount}`);
+    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime.toFixed(2)}`);
 
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
@@ -463,8 +436,8 @@ function updatePostData(postId, likes, viewTime, viewCount) {
 
     const postData = postDataCache[postId];
 
-    postData.totalViewTime = Math.min(viewTime, MAX_VIEW_TIME_PER_SESSION);
-    postData.viewCount = viewCount;
+    postData.totalViewTime = viewTime;
+    postData.viewCount = postViewStates[postId] ? postViewStates[postId].viewCount : 1;
     postData.likes = likes;
 
     console.log(`Updated post data: `, postData);
@@ -475,28 +448,10 @@ function updatePostData(postId, likes, viewTime, viewCount) {
     }
 }
 
-// Set up event listeners and intervals
-window.addEventListener('scroll', throttle(updateViewTimes, 100));
-window.addEventListener('resize', throttle(updateViewTimes, 100));
-setInterval(updateViewTimes, UPDATE_INTERVAL);
-
-// Update view times before unloading the page
-window.addEventListener('beforeunload', () => {
-    updateViewTimes();
-    Object.keys(postViewStates).forEach(postId => {
-        const state = postViewStates[postId];
-        if (state.totalViewTime > 0) {
-            const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-            if (post) {
-                const likes = parseInt(post.querySelector('.post-likes').textContent);
-                updatePostData(postId, likes, state.totalViewTime, state.viewCount);
-            }
-        }
-    });
-});
-
-
+// Function to send post data update to Firebase
 function sendPostDataUpdate(postId) {
+    if (isSurveyCompleted) return;
+
     const postData = postDataCache[postId];
     if (!postData) return;
 
@@ -508,20 +463,18 @@ function sendPostDataUpdate(postId) {
             const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
 
             let updatedPosts;
-            const currentTime = new Date().toISOString(); // Use ISO string instead of serverTimestamp
+            const currentTime = new Date().toISOString();
 
             if (existingPostIndex !== -1) {
-                // Update existing post data
                 updatedPosts = [...currentPosts];
                 updatedPosts[existingPostIndex] = {
                     ...updatedPosts[existingPostIndex],
                     likes: postData.likes,
-                    totalViewTime: (updatedPosts[existingPostIndex].totalViewTime || 0) + postData.totalViewTime,
-                    viewCount: (updatedPosts[existingPostIndex].viewCount || 0) + postData.viewCount,
+                    totalViewTime: postData.totalViewTime,
+                    viewCount: postData.viewCount,
                     lastUpdateTime: currentTime
                 };
             } else {
-                // Add new post data
                 updatedPosts = [
                     ...currentPosts,
                     {
@@ -540,36 +493,60 @@ function sendPostDataUpdate(postId) {
             return Promise.reject("User document does not exist");
         }
     }).then(() => {
-        postData.totalViewTime = 0;
-        postData.viewCount = 0;
         postData.lastUpdateTime = Date.now();
         console.log("Post data successfully updated");
     }).catch((error) => {
         console.error("Error updating post data:", error);
     });
 }
-        // Event listeners
-window.addEventListener('scroll', handleScroll);
-window.addEventListener('beforeunload', () => {
-    Object.keys(postDataCache).forEach(sendPostDataUpdate);
-});
 
+// Function to handle scroll events
 function handleScroll() {
-    updateViewTimes();
+    if (!isSurveyCompleted) {
+        updateViewTimes();
+    }
 }
 
+// Function to handle beforeunload events
+function beforeUnloadHandler() {
+    if (!isSurveyCompleted) {
+        Object.keys(postDataCache).forEach(sendPostDataUpdate);
+    }
+}
+
+// Throttle function for performance optimization
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
+
+// Set up event listeners
+window.addEventListener('scroll', throttle(handleScroll, 100));
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// Function to submit survey
 async function submitSurvey() {
+    if (isSurveyCompleted) return;
+
     console.log('Submitting survey...');
     clearInterval(timerInterval);
     updateViewTimes();
 
-    Object.keys(postViewTimes).forEach(postId => {
-        if (postViewTimes[postId]) {
-            const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
+    Object.keys(postViewStates).forEach(postId => {
+        const state = postViewStates[postId];
+        if (state.totalViewTime > 0) {
             const post = document.querySelector(`.post[data-post-id="${postId}"]`);
             if (post) {
                 const likes = parseInt(post.querySelector('.post-likes').textContent);
-                updatePostData(postId, likes, viewTime);
+                updatePostData(postId, likes, state.totalViewTime);
             }
         }
     });
@@ -581,11 +558,30 @@ async function submitSurvey() {
             totalTime: (Date.now() - startTime) / 1000
         });
         console.log('Survey submitted successfully');
+        isSurveyCompleted = true;
+        cleanupAfterSurvey();
         showPage('thank-you');
     } catch (error) {
         console.error("Error submitting survey:", error);
         alert('Error submitting data. Your responses may not have been saved.');
     }
+}
+
+// Function to clean up after survey completion
+function cleanupAfterSurvey() {
+    window.removeEventListener('scroll', handleScroll);
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+
+    clearInterval(timerInterval);
+
+    postViewTimes = {};
+    postViewStates = {};
+    postDataCache = {};
+
+    const postsContainer = document.getElementById('posts');
+    postsContainer.innerHTML = '';
+
+    console.log('Cleanup completed after survey submission');
 }
 
 // Initialize the application
@@ -609,7 +605,6 @@ document.addEventListener('DOMContentLoaded', function() {
             userData.docId = docRef.id;
             showPage('posts');
             loadPosts();
-
         } catch (error) {
             console.error("Error submitting data:", error);
             alert('Error logging in. Please try again.');
@@ -620,6 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Console log for debugging
 console.log('JavaScript loaded and running');
 
+   
     </script>
 </body>
 </html>
