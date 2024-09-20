@@ -58,18 +58,18 @@ const firebaseConfig = {
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
 let currentPage = 'user-form';
 let userData = {};
-let postViewTimes = {};
 let startTime;
 let postDataCache = {};
 const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
-const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
 let postViewStates = {};
 let timerInterval;
-
+let isPageVisible = true;
+let lastPageHideTime;
+        
+const db = firebase.firestore();
 const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
 const fixedPosts = [
     {
@@ -177,6 +177,22 @@ const variablePosts = [
     }
 }
 
+function handleVisibilityChange() {
+    isPageVisible = !document.hidden;
+    if (isPageVisible) {
+        startTime += performance.now() - lastPageHideTime;
+    } else {
+        lastPageHideTime = performance.now();
+    }
+}
+
+function calculateVisibleArea(post) {
+    const rect = post.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    const visibleHeight = Math.min(rect.bottom, windowHeight) - Math.max(rect.top, 0);
+    return visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
+}
+
 function generatePosts() {
     const posts = fixedPosts.map(post => ({...post, id: post.username}));
     const randomVariablePost = variablePosts[Math.floor(Math.random() * variablePosts.length)];
@@ -281,14 +297,12 @@ function loadPosts() {
     posts.forEach((post) => {
         const postElement = createPostElement(post);
         postsContainer.appendChild(postElement);
-        postViewTimes[post.id] = Date.now();
     });
     
-    startTime = Date.now();
-    console.log('Starting timer...');
-    timerInterval = setInterval(checkTimeAndSubmit, 1000);
+    startTime = performance.now();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    requestAnimationFrame(updateViewTimes);
 }
-
 
 function checkTimeAndSubmit() {
     const currentTime = Date.now();
@@ -303,43 +317,34 @@ function checkTimeAndSubmit() {
 }
         
 function updateViewTimes() {
+    if (!isPageVisible) return;
+
+    const currentTime = performance.now();
+    const elapsedTime = Math.min(currentTime - startTime, timeLimit);
     const posts = document.querySelectorAll('.post');
-    const viewportHeight = window.innerHeight;
-    const currentTime = Date.now();
 
     posts.forEach((post) => {
         const postId = post.dataset.postId;
-        const rect = post.getBoundingClientRect();
-        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
-        const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
+        const visibleArea = calculateVisibleArea(post);
 
         if (visibleArea > 20) {
             if (!postViewStates[postId]) {
-                postViewStates[postId] = {
-                    startTime: currentTime,
-                    actualStartTime: null,
-                    lastUpdateTime: currentTime
-                };
+                postViewStates[postId] = { totalViewTime: 0, lastUpdateTime: currentTime };
             } else {
                 const state = postViewStates[postId];
-                if (!state.actualStartTime && currentTime - state.startTime >= THRESHOLD_TIME) {
-                    state.actualStartTime = currentTime;
-                }
-                if (state.actualStartTime) {
-                    const viewTime = (currentTime - state.lastUpdateTime) / 1000;
-                    updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), viewTime);
-                    state.lastUpdateTime = currentTime;
-                }
+                const viewTime = (currentTime - state.lastUpdateTime) / 1000;
+                state.totalViewTime = Math.min(state.totalViewTime + viewTime, elapsedTime / 1000);
+                state.lastUpdateTime = currentTime;
             }
-        } else if (postViewStates[postId]) {
-            const state = postViewStates[postId];
-            if (state.actualStartTime) {
-                const finalViewTime = (currentTime - state.lastUpdateTime) / 1000;
-                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), finalViewTime);
-            }
-            delete postViewStates[postId];
+            updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), postViewStates[postId].totalViewTime);
         }
     });
+
+    if (elapsedTime < timeLimit) {
+        requestAnimationFrame(updateViewTimes);
+    } else {
+        submitSurvey();
+    }
 }
 
 function updatePostData(postId, likes, viewTime) {
@@ -432,26 +437,21 @@ function handleScroll() {
 }
 
 async function submitSurvey() {
-    console.log('Submitting survey...');
-    clearInterval(timerInterval);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
     updateViewTimes();
 
-    Object.keys(postViewTimes).forEach(postId => {
-        if (postViewTimes[postId]) {
-            const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
-            const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-            if (post) {
-                const likes = parseInt(post.querySelector('.post-likes').textContent);
-                updatePostData(postId, likes, viewTime);
-            }
+    for (const postId in postViewStates) {
+        const post = document.querySelector(`.post[data-post-id="${postId}"]`);
+        if (post) {
+            const likes = parseInt(post.querySelector('.post-likes').textContent);
+            await sendPostDataUpdate(postId, likes, postViewStates[postId].totalViewTime);
         }
-    });
+    }
 
-    await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
     try {
         await db.collection('users').doc(userData.docId).update({
             surveyCompleted: true,
-            totalTime: (Date.now() - startTime) / 1000
+            totalTime: (performance.now() - startTime) / 1000
         });
         console.log('Survey submitted successfully');
         showPage('thank-you');
@@ -482,7 +482,6 @@ document.addEventListener('DOMContentLoaded', function() {
             userData.docId = docRef.id;
             showPage('posts');
             loadPosts();
-
         } catch (error) {
             console.error("Error submitting data:", error);
             alert('Error logging in. Please try again.');
