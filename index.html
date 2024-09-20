@@ -68,6 +68,10 @@ let postDataCache = {};
 const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
 const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
 let postViewStates = {};
+const VISIBILITY_THRESHOLD = 50; // Percentage of post that needs to be visible
+const UPDATE_INTERVAL = 1000; // Update interval in milliseconds
+const MAX_VIEW_TIME_PER_SESSION = 180; // Maximum view time per session in seconds (e.g., 3 minutes)
+const MIN_TIME_TO_COUNT_VIEW = 1;
 let timerInterval;
 
 const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
@@ -336,20 +340,14 @@ function getActualViewport() {
 // Function to calculate visible area of a post
 function getPostVisibility(post) {
     const rect = post.getBoundingClientRect();
-    const viewport = getActualViewport();
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
 
-    // Calculate the visible area
-    const visibleTop = Math.max(viewport.top, rect.top);
-    const visibleBottom = Math.min(viewport.bottom, rect.bottom);
-    const visibleLeft = Math.max(viewport.left, rect.left);
-    const visibleRight = Math.min(viewport.right, rect.right);
+    const visibleHeight = Math.min(rect.bottom, windowHeight) - Math.max(rect.top, 0);
+    const visibleWidth = rect.width; // Assuming full width is always visible
 
-    const visibleWidth = Math.max(0, visibleRight - visibleLeft);
-    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-
-    // Calculate the visible area as a percentage of the total post area
-    const totalArea = rect.width * rect.height;
-    const visibleArea = visibleWidth * visibleHeight;
+    const visibleArea = visibleHeight * visibleWidth;
+    const totalArea = rect.height * rect.width;
+    
     const visibilityPercentage = (visibleArea / totalArea) * 100;
 
     return {
@@ -368,33 +366,49 @@ function updateViewTimes() {
 
         if (!postViewStates[postId]) {
             postViewStates[postId] = {
-                startTime: currentTime,
                 lastUpdateTime: currentTime,
                 totalViewTime: 0,
-                viewCount: 0
+                viewCount: 0,
+                isViewing: false
             };
         }
 
         const state = postViewStates[postId];
 
         if (visibility.isVisible) {
-            if (state.viewCount === 0) {
-                state.viewCount++;
+            if (!state.isViewing) {
+                state.isViewing = true;
+                state.lastUpdateTime = currentTime;
+            } else {
+                const viewDuration = (currentTime - state.lastUpdateTime) / 1000;
+                state.totalViewTime += viewDuration * (visibility.visibilityPercentage / 100);
+                state.lastUpdateTime = currentTime;
+
+                // Cap the total view time
+                state.totalViewTime = Math.min(state.totalViewTime, MAX_VIEW_TIME_PER_SESSION);
+
+                // Increment view count if enough time has passed
+                if (state.totalViewTime >= MIN_TIME_TO_COUNT_VIEW && state.viewCount === 0) {
+                    state.viewCount = 1;
+                }
             }
-            const viewDuration = (currentTime - state.lastUpdateTime) / 1000;
-            state.totalViewTime += viewDuration * (visibility.visibilityPercentage / 100);
-            state.lastUpdateTime = currentTime;
-        } else if (state.lastUpdateTime !== currentTime) {
-            const finalViewTime = (currentTime - state.lastUpdateTime) / 1000;
-            state.totalViewTime += finalViewTime;
-            updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), state.totalViewTime);
-            state.lastUpdateTime = currentTime;
+        } else {
+            if (state.isViewing) {
+                const finalViewDuration = (currentTime - state.lastUpdateTime) / 1000;
+                state.totalViewTime += finalViewDuration * (visibility.visibilityPercentage / 100);
+                state.isViewing = false;
+
+                // Cap the total view time
+                state.totalViewTime = Math.min(state.totalViewTime, MAX_VIEW_TIME_PER_SESSION);
+
+                // Update post data
+                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), state.totalViewTime, state.viewCount);
+            }
         }
 
         console.log(`Post ${postId}: Visibility ${visibility.visibilityPercentage.toFixed(2)}%, Total View Time: ${state.totalViewTime.toFixed(2)}s, View Count: ${state.viewCount}`);
     });
 }
-
 
 function throttle(func, limit) {
     let inThrottle;
@@ -434,8 +448,8 @@ window.addEventListener('beforeunload', () => {
     });
 });
         
-function updatePostData(postId, likes, viewTime) {
-    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime}`);
+function updatePostData(postId, likes, viewTime, viewCount) {
+    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime.toFixed(2)}, viewCount=${viewCount}`);
 
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
@@ -449,8 +463,8 @@ function updatePostData(postId, likes, viewTime) {
 
     const postData = postDataCache[postId];
 
-    postData.totalViewTime += viewTime;
-    postData.viewCount = postViewStates[postId] ? postViewStates[postId].viewCount : 1;
+    postData.totalViewTime = Math.min(viewTime, MAX_VIEW_TIME_PER_SESSION);
+    postData.viewCount = viewCount;
     postData.likes = likes;
 
     console.log(`Updated post data: `, postData);
@@ -460,6 +474,27 @@ function updatePostData(postId, likes, viewTime) {
         sendPostDataUpdate(postId);
     }
 }
+
+// Set up event listeners and intervals
+window.addEventListener('scroll', throttle(updateViewTimes, 100));
+window.addEventListener('resize', throttle(updateViewTimes, 100));
+setInterval(updateViewTimes, UPDATE_INTERVAL);
+
+// Update view times before unloading the page
+window.addEventListener('beforeunload', () => {
+    updateViewTimes();
+    Object.keys(postViewStates).forEach(postId => {
+        const state = postViewStates[postId];
+        if (state.totalViewTime > 0) {
+            const post = document.querySelector(`.post[data-post-id="${postId}"]`);
+            if (post) {
+                const likes = parseInt(post.querySelector('.post-likes').textContent);
+                updatePostData(postId, likes, state.totalViewTime, state.viewCount);
+            }
+        }
+    });
+});
+
 
 function sendPostDataUpdate(postId) {
     const postData = postDataCache[postId];
