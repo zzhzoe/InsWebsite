@@ -66,7 +66,7 @@
     let postViewTimes = {};
     let startTime;
     let postDataCache = {};
-    const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
+    const timeLimit = 181 * 1000; // 3 minutes in milliseconds
     const VISIBILITY_THRESHOLD = 50; // Percentage of post that needs to be visible
     const UPDATE_INTERVAL = 200; // Update interval in milliseconds
     let postViewStates = {};
@@ -231,18 +231,25 @@ function createPostElement(post) {
         <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
     `;
 
-    const postImageContainer = postElement.querySelector('.post-image-container');
+     const postImageContainer = postElement.querySelector('.post-image-container');
     let lastTap = 0;
 
     postImageContainer.addEventListener('click', function(e) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         if (tapLength < 300 && tapLength > 0) {
+            e.preventDefault();
+            e.stopPropagation();
             likePost(post.id);
             showLikeOverlay(this);
-            e.preventDefault();
         }
         lastTap = currentTime;
+    });
+
+    // 阻止双击缩放
+    postImageContainer.addEventListener('dblclick', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
     });
     
     const likeButton = postElement.querySelector('.like-button');
