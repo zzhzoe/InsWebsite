@@ -74,7 +74,6 @@
     let isSurveyCompleted = false;
 
     const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
-    
    const fixedPosts = [
     {
         username: "cats_golden",
@@ -169,7 +168,7 @@ const variablePosts = [
         isAI: true
     }
 ];
-   // Function to show different pages
+// Function to show different pages
 function showPage(pageId) {
     document.getElementById('user-form').style.display = 'none';
     document.getElementById('posts').style.display = 'none';
@@ -364,8 +363,6 @@ function getPostVisibility(post) {
         visibilityPercentage: visibilityPercentage
     };
 }
-
-// Function to update view times
 function updateViewTimes() {
     if (isSurveyCompleted) return;
 
