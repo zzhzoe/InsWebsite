@@ -302,6 +302,8 @@ function checkTimeAndSubmit() {
     }
 }
         
+let postTotalViewTimes = {};
+
 function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
@@ -317,34 +319,32 @@ function updateViewTimes() {
             if (!postViewStates[postId]) {
                 postViewStates[postId] = {
                     startTime: currentTime,
-                    actualStartTime: null,
                     lastUpdateTime: currentTime
                 };
+                postTotalViewTimes[postId] = postTotalViewTimes[postId] || 0;
             } else {
                 const state = postViewStates[postId];
-                if (!state.actualStartTime && currentTime - state.startTime >= THRESHOLD_TIME) {
-                    state.actualStartTime = currentTime;
+                const viewTime = (currentTime - state.lastUpdateTime) / 1000;
+                postTotalViewTimes[postId] += viewTime;
+                
+                // 限制每个帖子的最大 view time
+                const maxViewTimePerPost = 180; // 3分钟
+                if (postTotalViewTimes[postId] > maxViewTimePerPost) {
+                    const excessTime = postTotalViewTimes[postId] - maxViewTimePerPost;
+                    postTotalViewTimes[postId] = maxViewTimePerPost;
+                    viewTime -= excessTime;
                 }
-                if (state.actualStartTime) {
-                    const viewTime = (currentTime - state.lastUpdateTime) / 1000;
-                    updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), viewTime);
-                    state.lastUpdateTime = currentTime;
-                }
+
+                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), viewTime);
+                state.lastUpdateTime = currentTime;
             }
         } else if (postViewStates[postId]) {
-            const state = postViewStates[postId];
-            if (state.actualStartTime) {
-                const finalViewTime = (currentTime - state.lastUpdateTime) / 1000;
-                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), finalViewTime);
-            }
             delete postViewStates[postId];
         }
     });
 }
-
+        
 function updatePostData(postId, likes, viewTime) {
-    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime}`);
-
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
             id: postId,
@@ -357,18 +357,17 @@ function updatePostData(postId, likes, viewTime) {
 
     const postData = postDataCache[postId];
 
-    postData.totalViewTime += viewTime;
+    // 确保总 view time 不超过 3 分钟
+    const maxViewTime = 180; // 3分钟
+    postData.totalViewTime = Math.min(postData.totalViewTime + viewTime, maxViewTime);
     postData.viewCount++;
     postData.likes = likes;
 
-    console.log(`Updated post data: `, postData);
-
     if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
-        console.log(`Sending update for post ${postId}`);
         sendPostDataUpdate(postId);
     }
 }
-
+        
 function sendPostDataUpdate(postId) {
     const postData = postDataCache[postId];
     if (!postData) return;
