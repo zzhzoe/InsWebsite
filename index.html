@@ -249,13 +249,12 @@ function createPostElement(post) {
     likeButton.addEventListener('click', function() {
         likePost(post.id);
     });
+
     return postElement;
 }
 
 // Function to handle post liking
 function likePost(postId) {
-    if (isSurveyCompleted) return;
-
     const post = document.querySelector(`.post[data-post-id="${postId}"]`);
     const likeButton = post.querySelector('.like-button img');
     const likesElement = post.querySelector('.post-likes');
@@ -282,7 +281,7 @@ function showLikeOverlay(container) {
         overlay.style.display = 'none';
     }, 1500);
 }
-
+        
 // Function to load posts
 function loadPosts() {
     const postsContainer = document.getElementById('posts');
