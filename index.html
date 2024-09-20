@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Instagram Feed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -441,7 +441,7 @@ function updatePostData(postId, likes, viewTime) {
 
     console.log(`Updated post data: `, postData);
 
-    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
+    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 15) {
         console.log(`Sending update for post ${postId}`);
         sendPostDataUpdate(postId);
     }
