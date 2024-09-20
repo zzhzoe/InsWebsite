@@ -68,6 +68,7 @@ let postDataCache = {};
 const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
 const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
 let postViewStates = {};
+let timerInterval;
 
 const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
 const fixedPosts = [
@@ -282,7 +283,21 @@ function loadPosts() {
         postsContainer.appendChild(postElement);
         postViewTimes[post.id] = Date.now();
     });
+      startTime = Date.now();
+    timerInterval = setInterval(checkTimeAndSubmit, 1000);
 }
+
+
+function checkTimeAndSubmit() {
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - startTime;
+
+    if (elapsedTime >= timeLimit) {
+        clearInterval(timerInterval);
+        submitSurvey();
+    }
+}
+        
 function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
@@ -413,14 +428,15 @@ function handleScroll() {
 }
 
 async function submitSurvey() {
+     clearInterval(timerInterval);
     updateViewTimes();
 
-    Object.keys(postViewTimes).forEach(index => {
-        if (postViewTimes[index]) {
+    Object.keys(postViewTimes).forEach(postId  => {
+        if (postViewTimes[postId]) {
             const viewTime = (Date.now() - postViewTimes[index]) / 1000;
-            const post = document.querySelectorAll('.post')[index];
+            const post = document.querySelector(`.post[data-post-id="${postId}"]`);
             const likes = parseInt(post.querySelector('.post-likes').textContent);
-            updatePostData(parseInt(index), likes, viewTime);
+            updatePostData(postId, likes, viewTime);
         }
     });
 
@@ -458,8 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
             userData.docId = docRef.id;
             showPage('posts');
             loadPosts();
-            startTime = Date.now();
-            setTimeout(submitSurvey, timeLimit);
+
         } catch (error) {
             console.error("Error submitting data:", error);
             alert('Error logging in. Please try again.');
