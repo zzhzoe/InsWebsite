@@ -62,17 +62,13 @@ const db = firebase.firestore();
 
 let currentPage = 'user-form';
 let userData = {};
+let postViewTimes = {};
+let startTime;
 let postDataCache = {};
 const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
-let timerInterval;
-let startTime;
-
-// 新增：全局变量来存储每个帖子的查看状态
-let postViewStates = {};
-
-// 新增：常量定义
-const VISIBLE_THRESHOLD = 30; // 可见度阈值（百分比）
 const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
+let postViewStates = {};
+let timerInterval;
 
 const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
 const fixedPosts = [
@@ -285,23 +281,12 @@ function loadPosts() {
     posts.forEach((post) => {
         const postElement = createPostElement(post);
         postsContainer.appendChild(postElement);
+        postViewTimes[post.id] = Date.now();
     });
     
     startTime = Date.now();
     console.log('Starting timer...');
     timerInterval = setInterval(checkTimeAndSubmit, 1000);
-    
-    // 初始化postViewStates
-    posts.forEach(post => {
-        postViewStates[post.id] = {
-            startTime: null,
-            lastUpdateTime: null,
-            totalViewTime: 0
-        };
-    });
-
-    // 初次调用updateViewTimes来设置初始状态
-    updateViewTimes();
 }
 
 
@@ -318,79 +303,72 @@ function checkTimeAndSubmit() {
 }
         
 function updateViewTimes() {
-    const currentTime = Date.now();
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
+    const currentTime = Date.now();
 
     posts.forEach((post) => {
         const postId = post.dataset.postId;
         const rect = post.getBoundingClientRect();
-        
         const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
-        const visiblePercentage = (visibleHeight / rect.height) * 100;
+        const visibleArea = visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
 
-        if (visiblePercentage > VISIBLE_THRESHOLD) {
-            if (!postViewStates[postId].startTime) {
-                postViewStates[postId].startTime = currentTime;
-                postViewStates[postId].lastUpdateTime = currentTime;
+        if (visibleArea > 20) {
+            if (!postViewStates[postId]) {
+                postViewStates[postId] = {
+                    startTime: currentTime,
+                    actualStartTime: null,
+                    lastUpdateTime: currentTime
+                };
             } else {
-                const viewState = postViewStates[postId];
-                const elapsedTime = currentTime - viewState.lastUpdateTime;
-
-                if (elapsedTime >= THRESHOLD_TIME) {
-                    viewState.totalViewTime += elapsedTime;
-                    updatePostData(postId, getPostLikes(post), elapsedTime / 1000);
-                    viewState.lastUpdateTime = currentTime;
+                const state = postViewStates[postId];
+                if (!state.actualStartTime && currentTime - state.startTime >= THRESHOLD_TIME) {
+                    state.actualStartTime = currentTime;
+                }
+                if (state.actualStartTime) {
+                    const viewTime = (currentTime - state.lastUpdateTime) / 1000;
+                    updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), viewTime);
+                    state.lastUpdateTime = currentTime;
                 }
             }
-        } else {
-            if (postViewStates[postId].startTime) {
-                const finalViewTime = (currentTime - postViewStates[postId].startTime) / 1000;
-                if (finalViewTime >= THRESHOLD_TIME / 1000) {
-                    updatePostData(postId, getPostLikes(post), finalViewTime);
-                }
-                postViewStates[postId].startTime = null;
-                postViewStates[postId].lastUpdateTime = null;
+        } else if (postViewStates[postId]) {
+            const state = postViewStates[postId];
+            if (state.actualStartTime) {
+                const finalViewTime = (currentTime - state.lastUpdateTime) / 1000;
+                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), finalViewTime);
             }
+            delete postViewStates[postId];
         }
     });
 }
 
-// 更新 handleScroll 函数
-function handleScroll() {
-    requestAnimationFrame(updateViewTimes);
-}
-        
- function getPostLikes(post) {
-        return parseInt(post.querySelector('.post-likes').textContent);
-    }
-
-
 function updatePostData(postId, likes, viewTime) {
+    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime}`);
+
     if (!postDataCache[postId]) {
         postDataCache[postId] = {
             id: postId,
             totalViewTime: 0,
             viewCount: 0,
             likes: likes,
-            : Date.now()
+            lastUpdateTime: Date.now()
         };
     }
 
     const postData = postDataCache[postId];
 
-    // Ensure total view time doesn't exceed MAX_VIEW_TIME
-    postData.totalViewTime = Math.min(postData.totalViewTime + viewTime, MAX_VIEW_TIME);
+    postData.totalViewTime += viewTime;
     postData.viewCount++;
     postData.likes = likes;
 
-    console.log(`Post ${postId}: totalViewTime = ${postData.totalViewTime}, viewCount = ${postData.viewCount}`);
+    console.log(`Updated post data: `, postData);
 
-    if (Date.now() - postData. > 10000 || postData.totalViewTime >= MAX_VIEW_TIME) {
+    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
+        console.log(`Sending update for post ${postId}`);
         sendPostDataUpdate(postId);
     }
 }
-        
+
 function sendPostDataUpdate(postId) {
     const postData = postDataCache[postId];
     if (!postData) return;
@@ -403,26 +381,28 @@ function sendPostDataUpdate(postId) {
             const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
 
             let updatedPosts;
-            const currentTime = new Date().toISOString();
+            const currentTime = new Date().toISOString(); // Use ISO string instead of serverTimestamp
 
             if (existingPostIndex !== -1) {
+                // Update existing post data
                 updatedPosts = [...currentPosts];
                 updatedPosts[existingPostIndex] = {
                     ...updatedPosts[existingPostIndex],
                     likes: postData.likes,
-                    totalViewTime: Math.min(postData.totalViewTime, MAX_VIEW_TIME),
-                    viewCount: postData.viewCount,
-                    : currentTime
+                    totalViewTime: (updatedPosts[existingPostIndex].totalViewTime || 0) + postData.totalViewTime,
+                    viewCount: (updatedPosts[existingPostIndex].viewCount || 0) + postData.viewCount,
+                    lastUpdateTime: currentTime
                 };
             } else {
+                // Add new post data
                 updatedPosts = [
                     ...currentPosts,
                     {
                         id: postData.id,
                         likes: postData.likes,
-                        totalViewTime: Math.min(postData.totalViewTime, MAX_VIEW_TIME),
+                        totalViewTime: postData.totalViewTime,
                         viewCount: postData.viewCount,
-                        : currentTime
+                        lastUpdateTime: currentTime
                     }
                 ];
             }
@@ -433,34 +413,42 @@ function sendPostDataUpdate(postId) {
             return Promise.reject("User document does not exist");
         }
     }).then(() => {
-        postData. = Date.now();
-        console.log(`Post data successfully updated for ${postId}`);
+        postData.totalViewTime = 0;
+        postData.viewCount = 0;
+        postData.lastUpdateTime = Date.now();
+        console.log("Post data successfully updated");
     }).catch((error) => {
         console.error("Error updating post data:", error);
     });
 }
+        // Event listeners
+window.addEventListener('scroll', handleScroll);
+window.addEventListener('beforeunload', () => {
+    Object.keys(postDataCache).forEach(sendPostDataUpdate);
+});
 
-function finalizeViewTimes() {
-    const currentTime = Date.now();
-    Object.keys(postViewStates).forEach(postId => {
-        const viewState = postViewStates[postId];
-        if (viewState.startTime) {
-            const finalViewTime = (currentTime - viewState.startTime) / 1000;
-            if (finalViewTime >= THRESHOLD_TIME / 1000) {
-                const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-                updatePostData(postId, getPostLikes(post), finalViewTime);
-            }
-        }
-    });
+function handleScroll() {
+    updateViewTimes();
 }
 
 async function submitSurvey() {
     console.log('Submitting survey...');
     clearInterval(timerInterval);
-    finalizeViewTimes();
+    updateViewTimes();
 
+    Object.keys(postViewTimes).forEach(postId => {
+        if (postViewTimes[postId]) {
+            const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
+            const post = document.querySelector(`.post[data-post-id="${postId}"]`);
+            if (post) {
+                const likes = parseInt(post.querySelector('.post-likes').textContent);
+                updatePostData(postId, likes, viewTime);
+            }
+        }
+    });
+
+    await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
     try {
-        await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
         await db.collection('users').doc(userData.docId).update({
             surveyCompleted: true,
             totalTime: (Date.now() - startTime) / 1000
@@ -472,8 +460,9 @@ async function submitSurvey() {
         alert('Error submitting data. Your responses may not have been saved.');
     }
 }
+
 // Initialize the application
-  document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     showPage('user-form');
 
     document.getElementById('survey-form').addEventListener('submit', async function(e) {
@@ -493,10 +482,6 @@ async function submitSurvey() {
             userData.docId = docRef.id;
             showPage('posts');
             loadPosts();
-            
-            // 初始化滚动和调整大小事件监听器
-            window.addEventListener('scroll', handleScroll);
-            window.addEventListener('resize', handleScroll);
 
         } catch (error) {
             console.error("Error submitting data:", error);
