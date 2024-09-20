@@ -214,17 +214,14 @@ function createPostElement(post) {
     const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
     postElement.innerHTML = `
         <div class="post-header">
-            <img src="${post.profilePic}" alt="${post.username}">
-            <div>
-                <div class="post-username">${post.username}</div>
-                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">&#8505;</span> AI-generated content</div>' : ''}
-            </div>
-            <div class="post-options">•••</div>
+            <img src="${post.profilePic}" alt="${post.username}" class="profile-pic">
+            <span class="username">${post.username}</span>
+            <span class="options">•••</span>
         </div>
         <div class="post-image-container">
-            <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
+            <img src="${post.postImage}" alt="Post by ${post.username}" class="post-image">
             <div class="like-overlay">
-                <img src="https://img.icons8.com/ios-filled/50/ff0000/hearts.png" alt="Like">
+                <img src="https://img.icons8.com/ios-filled/50/ffffff/hearts.png" alt="Like">
             </div>
         </div>
         <div class="post-actions">
@@ -232,30 +229,27 @@ function createPostElement(post) {
             <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
-        <div class="post-likes">0 likes</div>
+        <div class="post-likes">${post.likes || 0} likes</div>
         <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
     `;
 
-     const postImageContainer = postElement.querySelector('.post-image-container');
-    let lastTap = 0;
+     const postImage = postElement.querySelector('.post-image');
+let lastTap = 0;
 
-    postImageContainer.addEventListener('click', function(e) {
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            likePost(post.id);
-            showLikeOverlay(this);
-        }
-        lastTap = currentTime;
-    });
-
-    // 阻止双击缩放
-    postImageContainer.addEventListener('dblclick', function(e) {
+postImage.addEventListener('click', function(e) {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    if (tapLength < 300 && tapLength > 0) {
         e.preventDefault();
-        e.stopPropagation();
-    });
+        likePost(post.id);
+        showLikeOverlay(postElement.querySelector('.post-image-container'));
+    }
+    lastTap = currentTime;
+});
+
+postImage.addEventListener('dblclick', function(e) {
+    e.preventDefault();
+});
     
     const likeButton = postElement.querySelector('.like-button');
     likeButton.addEventListener('click', function() {
@@ -288,9 +282,13 @@ function likePost(postId) {
 // Function to show like overlay
 function showLikeOverlay(container) {
     const overlay = container.querySelector('.like-overlay');
-    overlay.classList.add('show');
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
     setTimeout(() => {
-        overlay.classList.remove('show');
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 300);
     }, 1000);
 }
         
