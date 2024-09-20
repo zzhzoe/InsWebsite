@@ -191,7 +191,7 @@ function shuffleArray(array) {
     return array;
 }
 
-function createPostElement(post, index) {
+function createPostElement(post) {
     const postElement = document.createElement('div');
     postElement.className = 'post';
     postElement.dataset.postId = post.id; 
@@ -214,7 +214,7 @@ function createPostElement(post, index) {
             </div>
         </div>
         <div class="post-actions">
-            <button onclick="likePost(${index})"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like" class="like-button"></button>
+            <button class="like-button"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
@@ -223,20 +223,8 @@ function createPostElement(post, index) {
     `;
 
     const postImageContainer = postElement.querySelector('.post-image-container');
-    let lastTap = 0;
+    addDoubleClickListener(postImageContainer, post.id);
 
-    postImageContainer.addEventListener('click', function(e) {
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) {
-            likePost(post.id);
-            showLikeOverlay(this);
-            e.preventDefault();
-        }
-        lastTap = currentTime;
-    });
-
-    
     const likeButton = postElement.querySelector('.like-button');
     likeButton.addEventListener('click', function() {
         likePost(post.id);
@@ -245,9 +233,27 @@ function createPostElement(post, index) {
     return postElement;
 }
 
+        function addDoubleClickListener(element, postId) {
+    let lastTap = 0;
+    element.addEventListener('click', function(e) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+            likePost(postId);
+            showLikeOverlay(this);
+            e.preventDefault();
+        }
+        lastTap = currentTime;
+    });
+}
+
 function likePost(postId) {
     const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-    const likeButton = post.querySelector('.like-button');
+    if (!post) {
+        console.error(`Post with id ${postId} not found`);
+        return;
+    }
+    const likeButton = post.querySelector('.like-button img');
     const likesElement = post.querySelector('.post-likes');
     let likes = parseInt(likesElement.textContent);
 
@@ -279,12 +285,13 @@ function loadPosts() {
     postsContainer.innerHTML = '';
 
     const posts = generatePosts();
-    posts.forEach((post, index) => {
-        const postElement = createPostElement(post, index);
+    posts.forEach((post) => {
+        const postElement = createPostElement(post);
         postsContainer.appendChild(postElement);
         postViewTimes[post.id] = Date.now();
     });
 }
+        
 function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
@@ -439,7 +446,7 @@ async function submitSurvey() {
     }
 }
 
-// Initialize the application
+/ Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     showPage('user-form');
 
@@ -467,6 +474,12 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error logging in. Please try again.');
         }
     });
+});
+
+// Event listeners
+window.addEventListener('scroll', handleScroll);
+window.addEventListener('beforeunload', () => {
+    Object.keys(postDataCache).forEach(sendPostDataUpdate);
 });
 
 // Console log for debugging
