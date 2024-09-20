@@ -1,13 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-<style>
-    .post-image-container {
-        touch-action: manipulation;
-    }
-</style>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instagram Feed</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -71,7 +66,7 @@
     let postViewTimes = {};
     let startTime;
     let postDataCache = {};
-    const timeLimit = 181 * 1000; // 3 minutes in milliseconds
+    const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
     const VISIBILITY_THRESHOLD = 50; // Percentage of post that needs to be visible
     const UPDATE_INTERVAL = 200; // Update interval in milliseconds
     let postViewStates = {};
@@ -214,14 +209,17 @@ function createPostElement(post) {
     const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
     postElement.innerHTML = `
         <div class="post-header">
-            <img src="${post.profilePic}" alt="${post.username}" class="profile-pic">
-            <span class="username">${post.username}</span>
-            <span class="options">•••</span>
+            <img src="${post.profilePic}" alt="${post.username}">
+            <div>
+                <div class="post-username">${post.username}</div>
+                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">&#8505;</span> AI-generated content</div>' : ''}
+            </div>
+            <div class="post-options">•••</div>
         </div>
         <div class="post-image-container">
-            <img src="${post.postImage}" alt="Post by ${post.username}" class="post-image">
+            <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
             <div class="like-overlay">
-                <img src="https://img.icons8.com/ios-filled/50/ffffff/hearts.png" alt="Like">
+                <img src="https://img.icons8.com/ios-filled/50/ff0000/hearts.png" alt="Like">
             </div>
         </div>
         <div class="post-actions">
@@ -229,38 +227,35 @@ function createPostElement(post) {
             <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
-        <div class="post-likes">${post.likes || 0} likes</div>
+        <div class="post-likes">0 likes</div>
         <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
     `;
 
-     const postImage = postElement.querySelector('.post-image');
-let lastTap = 0;
+    const postImageContainer = postElement.querySelector('.post-image-container');
+    let lastTap = 0;
 
-postImage.addEventListener('click', function(e) {
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap;
-    if (tapLength < 300 && tapLength > 0) {
-        e.preventDefault();
-        likePost(post.id);
-        showLikeOverlay(postElement.querySelector('.post-image-container'));
-    }
-    lastTap = currentTime;
-});
-
-postImage.addEventListener('dblclick', function(e) {
-    e.preventDefault();
-});
+    postImageContainer.addEventListener('click', function(e) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+            likePost(post.id);
+            showLikeOverlay(this);
+            e.preventDefault();
+        }
+        lastTap = currentTime;
+    });
     
     const likeButton = postElement.querySelector('.like-button');
     likeButton.addEventListener('click', function() {
         likePost(post.id);
     });
-
     return postElement;
 }
 
 // Function to handle post liking
 function likePost(postId) {
+    if (isSurveyCompleted) return;
+
     const post = document.querySelector(`.post[data-post-id="${postId}"]`);
     const likeButton = post.querySelector('.like-button img');
     const likesElement = post.querySelector('.post-likes');
@@ -283,15 +278,11 @@ function likePost(postId) {
 function showLikeOverlay(container) {
     const overlay = container.querySelector('.like-overlay');
     overlay.style.display = 'flex';
-    overlay.style.opacity = '1';
     setTimeout(() => {
-        overlay.style.opacity = '0';
-        setTimeout(() => {
-            overlay.style.display = 'none';
-        }, 300);
-    }, 1000);
+        overlay.style.display = 'none';
+    }, 1500);
 }
-        
+
 // Function to load posts
 function loadPosts() {
     const postsContainer = document.getElementById('posts');
@@ -451,7 +442,7 @@ function updatePostData(postId, likes, viewTime) {
 
     console.log(`Updated post data: `, postData);
 
-    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 15) {
+    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
         console.log(`Sending update for post ${postId}`);
         sendPostDataUpdate(postId);
     }
