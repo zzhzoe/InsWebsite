@@ -45,453 +45,427 @@
     </div>
 
     <script>
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
-    authDomain: "research-project-0801.firebaseapp.com",
-    projectId: "research-project-0801",
-    storageBucket: "research-project-0801.appspot.com",
-    messagingSenderId: "655922410105",
-    appId: "1:655922410105:web:b0919370054af912261aa8",
-    measurementId: "G-PX7PE1V6S3"
-};
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyC13M47F_4HcP5Z0KPvnPdRs7FCzfwoKus",
+        authDomain: "research-project-0801.firebaseapp.com",
+        projectId: "research-project-0801",
+        storageBucket: "research-project-0801.appspot.com",
+        messagingSenderId: "655922410105",
+        appId: "1:655922410105:web:b0919370054af912261aa8",
+        measurementId: "G-PX7PE1V6S3"
+    };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-let currentPage = 'user-form';
-let userData = {};
-let startTime;
-let postDataCache = {};
-const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
-let postViewStates = {};
-let timerInterval;
-let isPageVisible = true;
-let lastPageHideTime;
-        
-const db = firebase.firestore();
-const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
-const fixedPosts = [
-    {
-        username: "cats_golden",
-        profilePic: baseUrl + "post/2.jpg",
-        postImage: baseUrl + "2.jpg",
-        caption: "Loving nature."
-    },
-    {
-        username: "greenly",
-        profilePic: baseUrl + "post/3.jpg",
-        postImage: baseUrl + "3.png",
-        caption: "Meet our new seasonal salad. It's a summer delight that you don't want to miss!"
-    },
-    {
-        username: "borcelle_ig",
-        profilePic: baseUrl + "post/4.png",
-        postImage: baseUrl + "4.png",
-        caption: "Oak Bedside Table. #simple #elegant"
-    },
-    {
-        username: "saadl.bike",
-        profilePic: baseUrl + "post/5.png",
-        postImage: baseUrl + "5.jpg",
-        caption: '"It\'s not the bike, it\'s the rider" #cycling #cyclinglife #cyclingshots'
-    },
-    {
-        username: "beautee.weekly",
-        profilePic: baseUrl + "post/6.png",
-        postImage: baseUrl + "6.jpg",
-        caption: "Purple is the theme of the week. #beautyfavorites #makeup #purplelove"
-    },
-    {
-        username: "getawaydotcom",
-        profilePic: baseUrl + "post/7.png",
-        postImage: baseUrl + "7.jpg",
-        caption: "Book your summer getaway today and get 25% off. #summersale"
-    },
-    {
-        id: "reads.by.rio",
-        username: "reads.by.rio",
-        profilePic: baseUrl + "post/10.jpg",
-        postImage: baseUrl + "10.jpg",
-        caption: "Tis the thriller/mystery season of the year. Check out my list..."
-    },
-    {
-        id: "memebot.19",
-        username: "Memebot.19",
-        profilePic: baseUrl + "post/8.jpg",
-        postImage: baseUrl + "8.png",
-        caption: "Tag that friend! #relatablememes #schoolmeme"
-    },
-    {
-        id: "teaNature",
-        username: "teaNature",
-        profilePic: baseUrl + "post/9.jpg",
-        postImage: baseUrl + "9.jpg",
-        caption: "Peach Oolong Tea 🍑 #homemade"
-    }
-];
+    let currentPage = 'user-form';
+    let userData = {};
+    let startTime;
+    let postDataCache = {};
+    const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
+    let postViewStates = {};
+    let isPageVisible = true;
+    let lastPageHideTime;
 
-const variablePosts = [
-    {
-        id: "1-fat-noai.JPG",
-        username: "juliastarlily",
-        profilePic: baseUrl + "post/1-fat.JPG",
-        postImage: baseUrl + "1-fat.JPG",
-        caption: "So excited to be the first influencer for #Alignyoga. Absolutely adore this outfit.",
-        isAI: false
-    },
-    {
-        id: "1-fat-ai.JPG",
-        username: "juliastarlily",
-        profilePic: baseUrl + "post/1-fat.JPG",
-        postImage: baseUrl + "1-fat.JPG",
-        caption: "So excited to be the first AI influencer for #Alignyoga. Absolutely adore this outfit.",
-        isAI: true
-    },
-    {
-        id: "1-thin-noai.JPG",
-        username: "juliastarlily",
-        profilePic: baseUrl + "post/1-thin.png",
-        postImage: baseUrl + "1-thin.JPG",
-        caption: "So excited to be the first influencer for #Alignyoga. Absolutely adore this outfit.",
-        isAI: false
-    },
-    {
-        id: "1-thin-ai.JPG",
-        username: "juliastarlily",
-        profilePic: baseUrl + "post/1-thin.png",
-        postImage: baseUrl + "1-thin.JPG",
-        caption: "So excited to be the first AI influencer for #Alignyoga. Absolutely adore this outfit.",
-        isAI: true
-    }
-];
-        function showPage(pageId) {
-    document.getElementById('user-form').style.display = 'none';
-    document.getElementById('posts').style.display = 'none';
-    document.getElementById('thank-you').style.display = 'none';
-    document.querySelector('.footer').style.display = 'none';
-
-    document.getElementById(pageId).style.display = 'block';
-    if (pageId === 'posts') {
-        document.querySelector('.footer').style.display = 'flex';
-    }
-}
-
-function handleVisibilityChange() {
-    isPageVisible = !document.hidden;
-    if (isPageVisible) {
-        startTime += performance.now() - lastPageHideTime;
-    } else {
-        lastPageHideTime = performance.now();
-    }
-}
-
-function calculateVisibleArea(post) {
-    const rect = post.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
-    const visibleHeight = Math.min(rect.bottom, windowHeight) - Math.max(rect.top, 0);
-    return visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
-}
-
-function generatePosts() {
-    const posts = fixedPosts.map(post => ({...post, id: post.username}));
-    const randomVariablePost = variablePosts[Math.floor(Math.random() * variablePosts.length)];
-    posts.unshift(randomVariablePost);
-    return shuffleArray(posts);
-}
-
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
-function createPostElement(post) {
-    const postElement = document.createElement('div');
-    postElement.className = 'post';
-    postElement.dataset.postId = post.id; 
-    const instagramBlue = '#00376b';
-
-    const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
-    postElement.innerHTML = `
-        <div class="post-header">
-            <img src="${post.profilePic}" alt="${post.username}">
-            <div>
-                <div class="post-username">${post.username}</div>
-                ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">&#8505;</span> AI-generated content</div>' : ''}
-            </div>
-            <div class="post-options">•••</div>
-        </div>
-        <div class="post-image-container">
-            <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
-            <div class="like-overlay">
-                <img src="https://img.icons8.com/ios-filled/50/ff0000/hearts.png" alt="Like">
-            </div>
-        </div>
-        <div class="post-actions">
-            <button onclick="likePost(${post.id})"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like" class="like-button"></button>
-            <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
-            <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
-        </div>
-        <div class="post-likes">0 likes</div>
-        <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
-    `;
-
-    const postImageContainer = postElement.querySelector('.post-image-container');
-    let lastTap = 0;
-
-    postImageContainer.addEventListener('click', function(e) {
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) {
-            likePost(post.id);
-            showLikeOverlay(this);
-            e.preventDefault();
+    const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
+    const fixedPosts = [
+        {
+            username: "cats_golden",
+            profilePic: baseUrl + "post/2.jpg",
+            postImage: baseUrl + "2.jpg",
+            caption: "Loving nature."
+        },
+        {
+            username: "greenly",
+            profilePic: baseUrl + "post/3.jpg",
+            postImage: baseUrl + "3.png",
+            caption: "Meet our new seasonal salad. It's a summer delight that you don't want to miss!"
+        },
+        {
+            username: "borcelle_ig",
+            profilePic: baseUrl + "post/4.png",
+            postImage: baseUrl + "4.png",
+            caption: "Oak Bedside Table. #simple #elegant"
+        },
+        {
+            username: "saadl.bike",
+            profilePic: baseUrl + "post/5.png",
+            postImage: baseUrl + "5.jpg",
+            caption: '"It\'s not the bike, it\'s the rider" #cycling #cyclinglife #cyclingshots'
+        },
+        {
+            username: "beautee.weekly",
+            profilePic: baseUrl + "post/6.png",
+            postImage: baseUrl + "6.jpg",
+            caption: "Purple is the theme of the week. #beautyfavorites #makeup #purplelove"
+        },
+        {
+            username: "getawaydotcom",
+            profilePic: baseUrl + "post/7.png",
+            postImage: baseUrl + "7.jpg",
+            caption: "Book your summer getaway today and get 25% off. #summersale"
+        },
+        {
+            id: "reads.by.rio",
+            username: "reads.by.rio",
+            profilePic: baseUrl + "post/10.jpg",
+            postImage: baseUrl + "10.jpg",
+            caption: "Tis the thriller/mystery season of the year. Check out my list..."
+        },
+        {
+            id: "memebot.19",
+            username: "Memebot.19",
+            profilePic: baseUrl + "post/8.jpg",
+            postImage: baseUrl + "8.png",
+            caption: "Tag that friend! #relatablememes #schoolmeme"
+        },
+        {
+            id: "teaNature",
+            username: "teaNature",
+            profilePic: baseUrl + "post/9.jpg",
+            postImage: baseUrl + "9.jpg",
+            caption: "Peach Oolong Tea 🍑 #homemade"
         }
-        lastTap = currentTime;
-    });
-    
-    const likeButton = postElement.querySelector('.like-button');
-    likeButton.addEventListener('click', function() {
-        likePost(post.id);
-    });
-    return postElement;
-}
+    ];
 
-function likePost(postId) {
-    const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-    const likeButton = post.querySelector('.like-button');
-    const likesElement = post.querySelector('.post-likes');
-    let likes = parseInt(likesElement.textContent);
+    const variablePosts = [
+        {
+            id: "1-fat-noai.JPG",
+            username: "juliastarlily",
+            profilePic: baseUrl + "post/1-fat.JPG",
+            postImage: baseUrl + "1-fat.JPG",
+            caption: "So excited to be the first influencer for #Alignyoga. Absolutely adore this outfit.",
+            isAI: false
+        },
+        {
+            id: "1-fat-ai.JPG",
+            username: "juliastarlily",
+            profilePic: baseUrl + "post/1-fat.JPG",
+            postImage: baseUrl + "1-fat.JPG",
+            caption: "So excited to be the first AI influencer for #Alignyoga. Absolutely adore this outfit.",
+            isAI: true
+        },
+        {
+            id: "1-thin-noai.JPG",
+            username: "juliastarlily",
+            profilePic: baseUrl + "post/1-thin.png",
+            postImage: baseUrl + "1-thin.JPG",
+            caption: "So excited to be the first influencer for #Alignyoga. Absolutely adore this outfit.",
+            isAI: false
+        },
+        {
+            id: "1-thin-ai.JPG",
+            username: "juliastarlily",
+            profilePic: baseUrl + "post/1-thin.png",
+            postImage: baseUrl + "1-thin.JPG",
+            caption: "So excited to be the first AI influencer for #Alignyoga. Absolutely adore this outfit.",
+            isAI: true
+        }
+    ];
 
-    if (likeButton.src.includes('ios/50')) {
-        likeButton.src = 'https://img.icons8.com/ios-filled/50/ff0000/hearts.png';
-        likes++;
-    } else {
-        likeButton.src = 'https://img.icons8.com/ios/50/000000/hearts--v1.png';
-        likes--;
+    function showPage(pageId) {
+        document.getElementById('user-form').style.display = 'none';
+        document.getElementById('posts').style.display = 'none';
+        document.getElementById('thank-you').style.display = 'none';
+        document.querySelector('.footer').style.display = 'none';
+
+        document.getElementById(pageId).style.display = 'block';
+        if (pageId === 'posts') {
+            document.querySelector('.footer').style.display = 'flex';
+        }
+        currentPage = pageId;
     }
 
-    likesElement.textContent = `${likes} likes`;
-
-    const viewTime = (Date.now() - postViewTimes[postId]) / 1000;
-    updatePostData(postId, likes, viewTime);
-    postViewTimes[postId] = Date.now();
-}
-
-function showLikeOverlay(container) {
-    const overlay = container.querySelector('.like-overlay');
-    overlay.style.display = 'flex';
-    setTimeout(() => {
-        overlay.style.display = 'none';
-    }, 1500);
-}
-
-function loadPosts() {
-    const postsContainer = document.getElementById('posts');
-    postsContainer.innerHTML = '';
-
-    const posts = generatePosts();
-    posts.forEach((post) => {
-        const postElement = createPostElement(post);
-        postsContainer.appendChild(postElement);
-    });
-    
-    startTime = performance.now();
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    requestAnimationFrame(updateViewTimes);
-}
-
-function checkTimeAndSubmit() {
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - startTime;
-    console.log(`Elapsed time: ${elapsedTime / 1000} seconds`);
-
-    if (elapsedTime >= timeLimit) {
-        console.log('Time limit reached, submitting survey...');
-        clearInterval(timerInterval);
-        submitSurvey();
+    function generatePosts() {
+        const posts = fixedPosts.map(post => ({...post, id: post.id || post.username}));
+        const randomVariablePost = variablePosts[Math.floor(Math.random() * variablePosts.length)];
+        posts.unshift(randomVariablePost);
+        return shuffleArray(posts);
     }
-}
-        
-function updateViewTimes() {
-    if (!isPageVisible) return;
 
-    const currentTime = performance.now();
-    const elapsedTime = Math.min(currentTime - startTime, timeLimit);
-    const posts = document.querySelectorAll('.post');
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
 
-    posts.forEach((post) => {
-        const postId = post.dataset.postId;
-        const visibleArea = calculateVisibleArea(post);
+    function createPostElement(post) {
+        const postElement = document.createElement('div');
+        postElement.className = 'post';
+        postElement.dataset.postId = post.id; 
+        const instagramBlue = '#00376b';
 
-        if (visibleArea > 20) {
-            if (!postViewStates[postId]) {
-                postViewStates[postId] = { totalViewTime: 0, lastUpdateTime: currentTime };
-            } else {
-                const state = postViewStates[postId];
-                const viewTime = (currentTime - state.lastUpdateTime) / 1000;
-                state.totalViewTime = Math.min(state.totalViewTime + viewTime, elapsedTime / 1000);
-                state.lastUpdateTime = currentTime;
+        const formattedCaption = post.caption.replace(/#(\w+)/g, `<span style="color: ${instagramBlue};">#$1</span>`);
+        postElement.innerHTML = `
+            <div class="post-header">
+                <img src="${post.profilePic}" alt="${post.username}">
+                <div>
+                    <div class="post-username">${post.username}</div>
+                    ${post.isAI ? '<div class="post-ai-label"><span class="info-icon">&#8505;</span> AI-generated content</div>' : ''}
+                </div>
+                <div class="post-options">•••</div>
+            </div>
+            <div class="post-image-container">
+                <img class="post-image" src="${post.postImage}" alt="Post by ${post.username}">
+                <div class="like-overlay">
+                    <img src="https://img.icons8.com/ios-filled/50/ff0000/hearts.png" alt="Like">
+                </div>
+            </div>
+            <div class="post-actions">
+                <button class="like-button"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like"></button>
+                <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
+                <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
+            </div>
+            <div class="post-likes">0 likes</div>
+            <div class="post-caption"><strong>${post.username}</strong> ${formattedCaption}</div>
+        `;
+
+        const postImageContainer = postElement.querySelector('.post-image-container');
+        let lastTap = 0;
+
+        postImageContainer.addEventListener('click', function(e) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 300 && tapLength > 0) {
+                likePost(post.id);
+                showLikeOverlay(this);
+                e.preventDefault();
             }
-            updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent), postViewStates[postId].totalViewTime);
+            lastTap = currentTime;
+        });
+        
+        const likeButton = postElement.querySelector('.like-button');
+        likeButton.addEventListener('click', function() {
+            likePost(post.id);
+        });
+        return postElement;
+    }
+
+    function likePost(postId) {
+        const post = document.querySelector(`.post[data-post-id="${postId}"]`);
+        const likeButton = post.querySelector('.like-button img');
+        const likesElement = post.querySelector('.post-likes');
+        let likes = parseInt(likesElement.textContent);
+
+        if (likeButton.src.includes('ios/50')) {
+            likeButton.src = 'https://img.icons8.com/ios-filled/50/ff0000/hearts.png';
+            likes++;
+        } else {
+            likeButton.src = 'https://img.icons8.com/ios/50/000000/hearts--v1.png';
+            likes--;
         }
-    });
 
-    if (elapsedTime < timeLimit) {
+        likesElement.textContent = `${likes} likes`;
+
+        updatePostData(postId, likes);
+    }
+
+    function showLikeOverlay(container) {
+        const overlay = container.querySelector('.like-overlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 1500);
+    }
+
+    function loadPosts() {
+        const postsContainer = document.getElementById('posts');
+        postsContainer.innerHTML = '';
+
+        const posts = generatePosts();
+        posts.forEach((post) => {
+            const postElement = createPostElement(post);
+            postsContainer.appendChild(postElement);
+        });
+        
+        startTime = performance.now();
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         requestAnimationFrame(updateViewTimes);
-    } else {
-        submitSurvey();
-    }
-}
-
-function updatePostData(postId, likes, viewTime) {
-    console.log(`Updating post data for post ${postId}: likes=${likes}, viewTime=${viewTime}`);
-
-    if (!postDataCache[postId]) {
-        postDataCache[postId] = {
-            id: postId,
-            totalViewTime: 0,
-            viewCount: 0,
-            likes: likes,
-            lastUpdateTime: Date.now()
-        };
     }
 
-    const postData = postDataCache[postId];
-
-    postData.totalViewTime += viewTime;
-    postData.viewCount++;
-    postData.likes = likes;
-
-    console.log(`Updated post data: `, postData);
-
-    if (Date.now() - postData.lastUpdateTime > 10000 || postData.totalViewTime > 30) {
-        console.log(`Sending update for post ${postId}`);
-        sendPostDataUpdate(postId);
+    function handleVisibilityChange() {
+        isPageVisible = !document.hidden;
+        if (isPageVisible) {
+            startTime += performance.now() - lastPageHideTime;
+        } else {
+            lastPageHideTime = performance.now();
+        }
     }
-}
 
-function sendPostDataUpdate(postId) {
-    const postData = postDataCache[postId];
-    if (!postData) return;
+    function calculateVisibleArea(post) {
+        const rect = post.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const visibleHeight = Math.min(rect.bottom, windowHeight) - Math.max(rect.top, 0);
+        return visibleHeight > 0 ? (visibleHeight / rect.height) * 100 : 0;
+    }
 
-    const userDocRef = db.collection('users').doc(userData.docId);
+    function updateViewTimes() {
+        if (!isPageVisible || currentPage !== 'posts') return;
 
-    userDocRef.get().then((doc) => {
-        if (doc.exists) {
-            const currentPosts = doc.data().posts || [];
-            const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
+        const currentTime = performance.now();
+        const elapsedTime = Math.min(currentTime - startTime, timeLimit);
+        const posts = document.querySelectorAll('.post');
 
-            let updatedPosts;
-            const currentTime = new Date().toISOString(); // Use ISO string instead of serverTimestamp
+        posts.forEach((post) => {
+            const postId = post.dataset.postId;
+            const visibleArea = calculateVisibleArea(post);
 
-            if (existingPostIndex !== -1) {
-                // Update existing post data
-                updatedPosts = [...currentPosts];
-                updatedPosts[existingPostIndex] = {
-                    ...updatedPosts[existingPostIndex],
-                    likes: postData.likes,
-                    totalViewTime: (updatedPosts[existingPostIndex].totalViewTime || 0) + postData.totalViewTime,
-                    viewCount: (updatedPosts[existingPostIndex].viewCount || 0) + postData.viewCount,
-                    lastUpdateTime: currentTime
-                };
-            } else {
-                // Add new post data
-                updatedPosts = [
-                    ...currentPosts,
-                    {
-                        id: postData.id,
+            if (visibleArea > 20) {
+                if (!postViewStates[postId]) {
+                    postViewStates[postId] = { totalViewTime: 0, lastUpdateTime: currentTime };
+                } else {
+                    const state = postViewStates[postId];
+                    const viewTime = (currentTime - state.lastUpdateTime) / 1000;
+                    state.totalViewTime = Math.min(state.totalViewTime + viewTime, elapsedTime / 1000);
+                    state.lastUpdateTime = currentTime;
+                }
+                updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent));
+            }
+        });
+
+        if (elapsedTime < timeLimit) {
+            requestAnimationFrame(updateViewTimes);
+        } else {
+            submitSurvey();
+        }
+    }
+
+   function updatePostData(postId, likes) {
+        const viewTime = postViewStates[postId] ? postViewStates[postId].totalViewTime : 0;
+        
+        if (!postDataCache[postId]) {
+            postDataCache[postId] = {
+                id: postId,
+                totalViewTime: viewTime,
+                likes: likes,
+                lastUpdateTime: Date.now()
+            };
+        } else {
+            postDataCache[postId].totalViewTime = viewTime;
+            postDataCache[postId].likes = likes;
+        }
+
+        // Debounce the update to Firestore
+        clearTimeout(postDataCache[postId].updateTimeout);
+        postDataCache[postId].updateTimeout = setTimeout(() => {
+            sendPostDataUpdate(postId);
+        }, 5000); // Update every 5 seconds at most
+    }
+
+    function sendPostDataUpdate(postId) {
+        const postData = postDataCache[postId];
+        if (!postData) return;
+
+        const userDocRef = db.collection('users').doc(userData.docId);
+
+        userDocRef.get().then((doc) => {
+            if (doc.exists) {
+                const currentPosts = doc.data().posts || [];
+                const existingPostIndex = currentPosts.findIndex(post => post.id === postData.id);
+
+                let updatedPosts;
+                const currentTime = new Date().toISOString();
+
+                if (existingPostIndex !== -1) {
+                    updatedPosts = [...currentPosts];
+                    updatedPosts[existingPostIndex] = {
+                        ...updatedPosts[existingPostIndex],
                         likes: postData.likes,
                         totalViewTime: postData.totalViewTime,
-                        viewCount: postData.viewCount,
                         lastUpdateTime: currentTime
-                    }
-                ];
+                    };
+                } else {
+                    updatedPosts = [
+                        ...currentPosts,
+                        {
+                            id: postData.id,
+                            likes: postData.likes,
+                            totalViewTime: postData.totalViewTime,
+                            lastUpdateTime: currentTime
+                        }
+                    ];
+                }
+
+                return userDocRef.update({ posts: updatedPosts });
+            } else {
+                console.error("User document does not exist!");
+                return Promise.reject("User document does not exist");
             }
-
-            return userDocRef.update({ posts: updatedPosts });
-        } else {
-            console.error("User document does not exist!");
-            return Promise.reject("User document does not exist");
-        }
-    }).then(() => {
-        postData.totalViewTime = 0;
-        postData.viewCount = 0;
-        postData.lastUpdateTime = Date.now();
-        console.log("Post data successfully updated");
-    }).catch((error) => {
-        console.error("Error updating post data:", error);
-    });
-}
-        // Event listeners
-window.addEventListener('scroll', handleScroll);
-window.addEventListener('beforeunload', () => {
-    Object.keys(postDataCache).forEach(sendPostDataUpdate);
-});
-
-function handleScroll() {
-    updateViewTimes();
-}
-
-async function submitSurvey() {
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    updateViewTimes();
-
-    for (const postId in postViewStates) {
-        const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-        if (post) {
-            const likes = parseInt(post.querySelector('.post-likes').textContent);
-            await sendPostDataUpdate(postId, likes, postViewStates[postId].totalViewTime);
-        }
-    }
-
-    try {
-        await db.collection('users').doc(userData.docId).update({
-            surveyCompleted: true,
-            totalTime: (performance.now() - startTime) / 1000
+        }).then(() => {
+            console.log("Post data successfully updated");
+        }).catch((error) => {
+            console.error("Error updating post data:", error);
         });
-        console.log('Survey submitted successfully');
-        showPage('thank-you');
-    } catch (error) {
-        console.error("Error submitting survey:", error);
-        alert('Error submitting data. Your responses may not have been saved.');
     }
-}
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    showPage('user-form');
+    async function submitSurvey() {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        updateViewTimes();
 
-    document.getElementById('survey-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
+        for (const postId in postViewStates) {
+            const post = document.querySelector(`.post[data-post-id="${postId}"]`);
+            if (post) {
+                const likes = parseInt(post.querySelector('.post-likes').textContent);
+                updatePostData(postId, likes);
+            }
+        }
 
-        userData = {
-            name: document.getElementById('name').value,
-            studentId: document.getElementById('studentId').value,
-            gender: document.getElementById('gender').value,
-            age: parseInt(document.getElementById('age').value),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            posts: []
-        };
+        // Wait for all updates to complete
+        await Promise.all(Object.keys(postDataCache).map(postId => {
+            return new Promise(resolve => {
+                clearTimeout(postDataCache[postId].updateTimeout);
+                sendPostDataUpdate(postId);
+                resolve();
+            });
+        }));
 
         try {
-            const docRef = await db.collection('users').add(userData);
-            userData.docId = docRef.id;
-            showPage('posts');
-            loadPosts();
+            await db.collection('users').doc(userData.docId).update({
+                surveyCompleted: true,
+                totalTime: (performance.now() - startTime) / 1000
+            });
+            console.log('Survey submitted successfully');
+            showPage('thank-you');
         } catch (error) {
-            console.error("Error submitting data:", error);
-            alert('Error logging in. Please try again.');
+            console.error("Error submitting survey:", error);
+            alert('Error submitting data. Your responses may not have been saved.');
         }
+    }
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function() {
+        showPage('user-form');
+
+        document.getElementById('survey-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            userData = {
+                name: document.getElementById('name').value,
+                studentId: document.getElementById('studentId').value,
+                gender: document.getElementById('gender').value,
+                age: parseInt(document.getElementById('age').value),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                posts: []
+            };
+
+            try {
+                const docRef = await db.collection('users').add(userData);
+                userData.docId = docRef.id;
+                showPage('posts');
+                loadPosts();
+            } catch (error) {
+                console.error("Error submitting data:", error);
+                alert('Error logging in. Please try again.');
+            }
+        });
     });
-});
 
-// Console log for debugging
-console.log('JavaScript loaded and running');
-
+    // Console log for debugging
+    console.log('JavaScript loaded and running');
     </script>
 </body>
 </html>
