@@ -60,17 +60,19 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-  let currentPage = 'user-form';
-    let userData = {};
-    let postDataCache = {};
-    const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
-    let timerInterval;
+let currentPage = 'user-form';
+let userData = {};
+let postDataCache = {};
+const timeLimit = 3 * 60 * 1000; // 3 minutes in milliseconds
+let timerInterval;
+let startTime;
 
-    let postViewStates = {};
+// 新增：全局变量来存储每个帖子的查看状态
+let postViewStates = {};
 
-    // 新增：常量定义
-    const VISIBLE_THRESHOLD = 30; // 可见度阈值（百分比）
-    const THRESHOLD_TIME = 500; //
+// 新增：常量定义
+const VISIBLE_THRESHOLD = 30; // 可见度阈值（百分比）
+const THRESHOLD_TIME = 500; // 设置阈值时间为500毫秒
 
 const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
 const fixedPosts = [
@@ -283,12 +285,23 @@ function loadPosts() {
     posts.forEach((post) => {
         const postElement = createPostElement(post);
         postsContainer.appendChild(postElement);
-        postViewTimes[post.id] = Date.now();
     });
     
     startTime = Date.now();
     console.log('Starting timer...');
     timerInterval = setInterval(checkTimeAndSubmit, 1000);
+    
+    // 初始化postViewStates
+    posts.forEach(post => {
+        postViewStates[post.id] = {
+            startTime: null,
+            lastUpdateTime: null,
+            totalViewTime: 0
+        };
+    });
+
+    // 初次调用updateViewTimes来设置初始状态
+    updateViewTimes();
 }
 
 
@@ -305,55 +318,53 @@ function checkTimeAndSubmit() {
 }
         
 function updateViewTimes() {
-        const currentTime = Date.now();
-        const posts = document.querySelectorAll('.post');
-        const viewportHeight = window.innerHeight;
+    const currentTime = Date.now();
+    const posts = document.querySelectorAll('.post');
+    const viewportHeight = window.innerHeight;
 
-        posts.forEach((post) => {
-            const postId = post.dataset.postId;
-            const rect = post.getBoundingClientRect();
-            
-            const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
-            const visiblePercentage = (visibleHeight / rect.height) * 100;
+    posts.forEach((post) => {
+        const postId = post.dataset.postId;
+        const rect = post.getBoundingClientRect();
+        
+        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+        const visiblePercentage = (visibleHeight / rect.height) * 100;
 
-            if (visiblePercentage > VISIBLE_THRESHOLD) {
-                if (!postViewStates[postId]) {
-                    postViewStates[postId] = {
-                        startTime: currentTime,
-                        lastUpdateTime: currentTime,
-                        totalViewTime: 0
-                    };
-                } else {
-                    const viewState = postViewStates[postId];
-                    const elapsedTime = currentTime - viewState.lastUpdateTime;
+        if (visiblePercentage > VISIBLE_THRESHOLD) {
+            if (!postViewStates[postId].startTime) {
+                postViewStates[postId].startTime = currentTime;
+                postViewStates[postId].lastUpdateTime = currentTime;
+            } else {
+                const viewState = postViewStates[postId];
+                const elapsedTime = currentTime - viewState.lastUpdateTime;
 
-                    if (elapsedTime >= THRESHOLD_TIME) {
-                        viewState.totalViewTime += elapsedTime;
-                        updatePostData(postId, getPostLikes(post), elapsedTime / 1000);
-                    }
-
+                if (elapsedTime >= THRESHOLD_TIME) {
+                    viewState.totalViewTime += elapsedTime;
+                    updatePostData(postId, getPostLikes(post), elapsedTime / 1000);
                     viewState.lastUpdateTime = currentTime;
                 }
-            } else {
-                if (postViewStates[postId]) {
-                    const finalViewTime = (currentTime - postViewStates[postId].startTime) / 1000;
-                    if (finalViewTime >= THRESHOLD_TIME / 1000) {
-                        updatePostData(postId, getPostLikes(post), finalViewTime);
-                    }
-                    delete postViewStates[postId];
-                }
             }
-        });
-    }
+        } else {
+            if (postViewStates[postId].startTime) {
+                const finalViewTime = (currentTime - postViewStates[postId].startTime) / 1000;
+                if (finalViewTime >= THRESHOLD_TIME / 1000) {
+                    updatePostData(postId, getPostLikes(post), finalViewTime);
+                }
+                postViewStates[postId].startTime = null;
+                postViewStates[postId].lastUpdateTime = null;
+            }
+        }
+    });
+}
+
+// 更新 handleScroll 函数
+function handleScroll() {
+    requestAnimationFrame(updateViewTimes);
+}
         
  function getPostLikes(post) {
         return parseInt(post.querySelector('.post-likes').textContent);
     }
 
-    // 更新：修改 handleScroll 函数
-    function handleScroll() {
-        requestAnimationFrame(updateViewTimes);
-    }
 
 function updatePostData(postId, likes, viewTime) {
     if (!postDataCache[postId]) {
@@ -430,68 +441,69 @@ function sendPostDataUpdate(postId) {
 }
 
 function finalizeViewTimes() {
-        const currentTime = Date.now();
-        Object.keys(postViewStates).forEach(postId => {
-            const viewState = postViewStates[postId];
+    const currentTime = Date.now();
+    Object.keys(postViewStates).forEach(postId => {
+        const viewState = postViewStates[postId];
+        if (viewState.startTime) {
             const finalViewTime = (currentTime - viewState.startTime) / 1000;
             if (finalViewTime >= THRESHOLD_TIME / 1000) {
                 const post = document.querySelector(`.post[data-post-id="${postId}"]`);
                 updatePostData(postId, getPostLikes(post), finalViewTime);
             }
-        });
-        postViewStates = {}; // 重置状态
-    }
-
- async function submitSurvey() {
-        console.log('Submitting survey...');
-        clearInterval(timerInterval);
-        finalizeViewTimes();
-
-        try {
-            await db.collection('users').doc(userData.docId).update({
-                surveyCompleted: true,
-                totalTime: (Date.now() - startTime) / 1000
-            });
-            console.log('Survey submitted successfully');
-            showPage('thank-you');
-        } catch (error) {
-            console.error("Error submitting survey:", error);
-            alert('Error submitting data. Your responses may not have been saved.');
         }
-    }
+    });
+}
 
+async function submitSurvey() {
+    console.log('Submitting survey...');
+    clearInterval(timerInterval);
+    finalizeViewTimes();
+
+    try {
+        await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
+        await db.collection('users').doc(userData.docId).update({
+            surveyCompleted: true,
+            totalTime: (Date.now() - startTime) / 1000
+        });
+        console.log('Survey submitted successfully');
+        showPage('thank-you');
+    } catch (error) {
+        console.error("Error submitting survey:", error);
+        alert('Error submitting data. Your responses may not have been saved.');
+    }
+}
 // Initialize the application
   document.addEventListener('DOMContentLoaded', function() {
-        showPage('user-form');
+    showPage('user-form');
 
-        document.getElementById('survey-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
+    document.getElementById('survey-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
 
-            userData = {
-                name: document.getElementById('name').value,
-                studentId: document.getElementById('studentId').value,
-                gender: document.getElementById('gender').value,
-                age: parseInt(document.getElementById('age').value),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                posts: []
-            };
+        userData = {
+            name: document.getElementById('name').value,
+            studentId: document.getElementById('studentId').value,
+            gender: document.getElementById('gender').value,
+            age: parseInt(document.getElementById('age').value),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            posts: []
+        };
 
-            try {
-                const docRef = await db.collection('users').add(userData);
-                userData.docId = docRef.id;
-                showPage('posts');
-                loadPosts();
-                
-                // 新增：初始化滚动和调整大小事件监听器
-                window.addEventListener('scroll', handleScroll);
-                window.addEventListener('resize', handleScroll);
+        try {
+            const docRef = await db.collection('users').add(userData);
+            userData.docId = docRef.id;
+            showPage('posts');
+            loadPosts();
+            
+            // 初始化滚动和调整大小事件监听器
+            window.addEventListener('scroll', handleScroll);
+            window.addEventListener('resize', handleScroll);
 
-            } catch (error) {
-                console.error("Error submitting data:", error);
-                alert('Error logging in. Please try again.');
-            }
-        });
+        } catch (error) {
+            console.error("Error submitting data:", error);
+            alert('Error logging in. Please try again.');
+        }
     });
+});
 
 // Console log for debugging
 console.log('JavaScript loaded and running');
