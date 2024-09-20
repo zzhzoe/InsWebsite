@@ -288,10 +288,10 @@ function likePost(postId) {
 // Function to show like overlay
 function showLikeOverlay(container) {
     const overlay = container.querySelector('.like-overlay');
-    overlay.style.display = 'flex';
+    overlay.classList.add('show');
     setTimeout(() => {
-        overlay.style.display = 'none';
-    }, 1500);
+        overlay.classList.remove('show');
+    }, 1000);
 }
         
 // Function to load posts
