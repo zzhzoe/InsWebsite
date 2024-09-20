@@ -191,7 +191,7 @@ function shuffleArray(array) {
     return array;
 }
 
-function createPostElement(post) {
+function createPostElement(post, index) {
     const postElement = document.createElement('div');
     postElement.className = 'post';
     postElement.dataset.postId = post.id; 
@@ -214,7 +214,7 @@ function createPostElement(post) {
             </div>
         </div>
         <div class="post-actions">
-            <button class="like-button"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like"></button>
+            <button onclick="likePost(${index})"><img src="https://img.icons8.com/ios/50/000000/hearts--v1.png" alt="Like" class="like-button"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/comments--v1.png" alt="Comment"></button>
             <button><img src="https://img.icons8.com/ios/50/000000/sent--v1.png" alt="Share"></button>
         </div>
@@ -223,37 +223,29 @@ function createPostElement(post) {
     `;
 
     const postImageContainer = postElement.querySelector('.post-image-container');
-    addDoubleClickListener(postImageContainer, post.id);
-
-    const likeButton = postElement.querySelector('.like-button');
-    likeButton.addEventListener('click', function() {
-        likePost(post.id);
-    });
-
-    return postElement;
-}
-
-        function addDoubleClickListener(element, postId) {
     let lastTap = 0;
-    element.addEventListener('click', function(e) {
+
+    postImageContainer.addEventListener('click', function(e) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         if (tapLength < 300 && tapLength > 0) {
-            likePost(postId);
+            likePost(post.id);
             showLikeOverlay(this);
             e.preventDefault();
         }
         lastTap = currentTime;
     });
+    
+    const likeButton = postElement.querySelector('.like-button');
+    likeButton.addEventListener('click', function() {
+        likePost(post.id);
+    });
+    return postElement;
 }
 
 function likePost(postId) {
     const post = document.querySelector(`.post[data-post-id="${postId}"]`);
-    if (!post) {
-        console.error(`Post with id ${postId} not found`);
-        return;
-    }
-    const likeButton = post.querySelector('.like-button img');
+    const likeButton = post.querySelector('.like-button');
     const likesElement = post.querySelector('.post-likes');
     let likes = parseInt(likesElement.textContent);
 
@@ -285,13 +277,12 @@ function loadPosts() {
     postsContainer.innerHTML = '';
 
     const posts = generatePosts();
-    posts.forEach((post) => {
-        const postElement = createPostElement(post);
+    posts.forEach((post, index) => {
+        const postElement = createPostElement(post, index);
         postsContainer.appendChild(postElement);
         postViewTimes[post.id] = Date.now();
     });
 }
-        
 function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const viewportHeight = window.innerHeight;
@@ -432,7 +423,7 @@ async function submitSurvey() {
             updatePostData(parseInt(index), likes, viewTime);
         }
     });
-    
+
     await Promise.all(Object.keys(postDataCache).map(sendPostDataUpdate));
     try {
         await db.collection('users').doc(userData.docId).update({
@@ -446,7 +437,7 @@ async function submitSurvey() {
     }
 }
 
-/ Initialize the application
+// Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     showPage('user-form');
 
@@ -474,12 +465,6 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error logging in. Please try again.');
         }
     });
-});
-
-// Event listeners
-window.addEventListener('scroll', handleScroll);
-window.addEventListener('beforeunload', () => {
-    Object.keys(postDataCache).forEach(sendPostDataUpdate);
 });
 
 // Console log for debugging
