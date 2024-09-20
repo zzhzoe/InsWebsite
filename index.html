@@ -31,8 +31,12 @@
         </div>
 
         <div id="thank-you" style="display: none;">
-            <h2>Thank You for Participating!</h2>
-            <p>Your responses have been recorded.</p>
+            <h2>Thank You for Your Participation!</h2>
+            <p>Your feedback is invaluable to our research.</p>
+            <p>We sincerely appreciate you taking the time to complete this survey.</p>
+            <p>Your responses have been securely recorded.</p>
+            <p>Once again, thank you for your contribution.</p>
+            <p>Have a great day!</p>
         </div>
 
         <div class="footer" style="display: none;">
@@ -68,6 +72,7 @@
     let postViewStates = {};
     let isPageVisible = true;
     let lastPageHideTime;
+    let totalSurveyTime = 0;
 
     const baseUrl = "https://zzhzoe.github.io/InsWebsite/post_images/";
     const fixedPosts = [
@@ -308,7 +313,10 @@
 
         const currentTime = performance.now();
         const elapsedTime = Math.min(currentTime - startTime, timeLimit);
+        totalSurveyTime = elapsedTime / 1000;
         const posts = document.querySelectorAll('.post');
+
+        let totalViewTimeThisUpdate = 0;
 
         posts.forEach((post) => {
             const postId = post.dataset.postId;
@@ -320,9 +328,30 @@
                 } else {
                     const state = postViewStates[postId];
                     const viewTime = (currentTime - state.lastUpdateTime) / 1000;
-                    state.totalViewTime = Math.min(state.totalViewTime + viewTime, elapsedTime / 1000);
+                    const newTotalViewTime = Math.min(state.totalViewTime + viewTime, totalSurveyTime);
+                    const actualViewTimeAdded = newTotalViewTime - state.totalViewTime;
+                    totalViewTimeThisUpdate += actualViewTimeAdded;
+                    state.totalViewTime = newTotalViewTime;
                     state.lastUpdateTime = currentTime;
                 }
+            }
+});
+
+        // Normalize view times if total exceeds survey time
+        if (totalViewTimeThisUpdate > 0) {
+            const normalizationFactor = Math.min(1, (elapsedTime / 1000) / totalViewTimeThisUpdate);
+            posts.forEach((post) => {
+                const postId = post.dataset.postId;
+                if (postViewStates[postId]) {
+                    postViewStates[postId].totalViewTime *= normalizationFactor;
+                }
+            });
+        }
+
+        // Update post data for all posts
+        posts.forEach((post) => {
+            const postId = post.dataset.postId;
+            if (postViewStates[postId]) {
                 updatePostData(postId, parseInt(post.querySelector('.post-likes').textContent));
             }
         });
@@ -334,7 +363,7 @@
         }
     }
 
-   function updatePostData(postId, likes) {
+    function updatePostData(postId, likes) {
         const viewTime = postViewStates[postId] ? postViewStates[postId].totalViewTime : 0;
         
         if (!postDataCache[postId]) {
@@ -426,7 +455,7 @@
         try {
             await db.collection('users').doc(userData.docId).update({
                 surveyCompleted: true,
-                totalTime: (performance.now() - startTime) / 1000
+                totalTime: totalSurveyTime
             });
             console.log('Survey submitted successfully');
             showPage('thank-you');
