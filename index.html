@@ -11,7 +11,7 @@
 <body>
      <div id="app">
         <div id="user-form">
-           <img src="https://zzhzoe.github.io/InsWebsite/post_images/c7890482ef886ead7507cf0ff4624481.PNG" alt="Bubbles" class="bubbles-logo">
+           <img src="https://zzhzoe.github.io/InsWebsite/post_images/IMG_0619.PNG" alt="Instagram" class="instagram-logo">
             <form id="survey-form">
                 <input type="text" id="name" placeholder="NickName" required>
                 <input type="text" id="studentId" placeholder="Student ID" required>
@@ -239,7 +239,7 @@ function createPostElement(post) {
         }
         lastTap = currentTime;
     });
-    
+
     const likeButton = postElement.querySelector('.like-button');
     likeButton.addEventListener('click', function() {
         likePost(post.id);
@@ -286,7 +286,7 @@ function loadPosts() {
         postsContainer.appendChild(postElement);
         postViewTimes[post.id] = Date.now();
     });
-    
+
     startTime = Date.now();
     console.log('Starting timer...');
     timerInterval = setInterval(checkTimeAndSubmit, 1000);
@@ -304,7 +304,7 @@ function checkTimeAndSubmit() {
         submitSurvey();
     }
 }
-        
+
 function updateViewTimes() {
     const posts = document.querySelectorAll('.post');
     const currentTime = Date.now();
