@@ -199,4 +199,9 @@ button {
         margin-right: 4px;
         fill: #8e8e8e;
     }
+.bubbles-logo {
+  max-width: 200px; /* Adjust as needed */
+  height: auto;
+  margin-bottom: 20px; /* Add space below the logo */
+}
 </style>
